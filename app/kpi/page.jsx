@@ -2,6 +2,7 @@ import Link from 'next/link';
 import KpiFilter from '@/components/KpiFilter';
 import {
   DEFAULT_HOSPCODE,
+  EXCLUDED_ZONES,
   KPI_NAME,
   VIEWS,
   getAreaOptions,
@@ -9,6 +10,7 @@ import {
   getKpiYears,
   getOfficeTypes,
   kpiAvailable,
+  parseKpiQuery,
   pctChange,
 } from '@/lib/kpi';
 
@@ -84,22 +86,6 @@ function EmptyState() {
   );
 }
 
-// อ่านพารามิเตอร์จาก URL → ค่าที่ใช้ได้จริง (missing = ยังเลือกไม่ครบ)
-function parseQuery(sp) {
-  const view = VIEWS[sp.view] ? sp.view : 'country';
-  const q = { view, type: view === 'hosp' ? '' : sp.type || '' };
-  if (view === 'hosp') q.hosp = String(sp.hosp || DEFAULT_HOSPCODE).trim();
-  if (view === 'zone') q.zone = sp.zone || '';
-  if (view === 'province' || view === 'district') q.province = sp.province || '';
-  if (view === 'district') q.district = sp.district || '';
-  const missing =
-    (view === 'zone' && !q.zone && 'เขตสุขภาพ') ||
-    (view === 'province' && !q.province && 'จังหวัด') ||
-    (view === 'district' && (!q.province ? 'จังหวัดและอำเภอ' : !q.district && 'อำเภอ')) ||
-    null;
-  return { q, missing };
-}
-
 export default async function KpiPage({ searchParams }) {
   if (!kpiAvailable()) return <EmptyState />;
   const sp = await searchParams;
@@ -110,7 +96,7 @@ export default async function KpiPage({ searchParams }) {
   const years = files.slice(-2).map((f) => f.year);
   const [prevYear, curYear] = years.length === 2 ? years : [null, years[0]];
 
-  const { q, missing } = parseQuery(sp);
+  const { q, missing } = parseKpiQuery(sp);
   const report = missing ? null : getCompareReport(q, years);
   const options = getAreaOptions();
   const types = getOfficeTypes();
@@ -172,6 +158,11 @@ export default async function KpiPage({ searchParams }) {
       </section>
 
       <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mb-3 flex justify-end">
+          <Link href="/kpi/settings" className="text-sm text-emerald-700 hover:underline">
+            ⚙ ตั้งค่าไฟล์ข้อมูลปี {curYear}
+          </Link>
+        </div>
         <div className="mb-8">
           <KpiFilter
             key={JSON.stringify(q)}
@@ -196,6 +187,9 @@ export default async function KpiPage({ searchParams }) {
               'พื้นที่ที่เลือก'
             )}{' '}
             ในปีงบประมาณ {years.join(' / ')}
+            <div className="mt-1 text-sm text-gray-500">
+              (หน่วยบริการในเขตสุขภาพที่ {EXCLUDED_ZONES.join(', ')} และที่ไม่พบเขตสุขภาพ ไม่นำมาคำนวณ)
+            </div>
           </div>
         )}
 
@@ -243,13 +237,15 @@ export default async function KpiPage({ searchParams }) {
             </div>
 
             {q.view === 'hosp' ? (
-              <HospDrugs drugs={report.children} prevYear={prevYear} curYear={curYear} />
+              <HospDrugs drugs={report.children.filter((d) => d.in24)} prevYear={prevYear} curYear={curYear} />
             ) : (
               <div className="grid gap-6 lg:grid-cols-3">
                 <ChildrenTable report={report} q={q} prevYear={prevYear} curYear={curYear} />
                 <TopGroups items={report.topGroups} prevYear={prevYear} curYear={curYear} />
               </div>
             )}
+
+            <NotFound24 items={report.notFound24} q={q} prevYear={prevYear} curYear={curYear} />
 
             {q.view === 'hosp' && report.area.hosp && <HospLinks h={report.area.hosp} />}
           </>
@@ -261,6 +257,13 @@ export default async function KpiPage({ searchParams }) {
             <li>ล้างรหัส didstd ให้เหลือแต่ตัวเลข แล้วใช้ 11 หลักแรกหากลุ่มยาใน herbal_drug_master_11</li>
             <li>มูลค่าตัวชี้วัด = จำนวนครั้ง UC (vs_uc) × ราคาต่อ course ของกลุ่มยา — รหัสที่ไม่อยู่ในกลุ่มคิดเป็น 0 บาท</li>
             <li>ร้อยละการเปลี่ยนแปลง = (ปีหลัง − ปีก่อน) ÷ ปีก่อน × 100</li>
+            <li>
+              ไม่นำมาคำนวณ: หน่วยบริการในเขตสุขภาพที่ {EXCLUDED_ZONES.join(', ')} และหน่วยบริการที่ไม่พบเขตสุขภาพ
+            </li>
+            <li>
+              รหัส 24 หลักและรหัสที่มาของยา ตรวจกับไฟล์รหัสยาแผนไทย 24 หลัก (กรมการแพทย์แผนไทยฯ) —
+              รหัสที่ไม่พบยังคิดมูลค่าตามกลุ่ม 11 หลักตามปกติ
+            </li>
             {files.slice(-2).map((f) => (
               <li key={f.year}>
                 ปี {f.year}: {f.file} · {num(f.rows)} แถว · ข้อมูลล่าสุด {formatDateCom(f.max_date_com)}
@@ -404,6 +407,19 @@ function TopGroups({ items, prevYear, curYear }) {
   );
 }
 
+function Code24({ d }) {
+  return (
+    <>
+      <div className="mono text-gray-800">{d.code24 || '(ว่าง)'}</div>
+      {d.didstd && d.didstd !== d.code24 && (
+        <div className="mono text-xs text-amber-700" title="รหัสที่หน่วยบริการส่งมา ก่อนล้างอักขระ">
+          ส่งมา: {d.didstd}
+        </div>
+      )}
+    </>
+  );
+}
+
 function HospDrugs({ drugs, prevYear, curYear }) {
   const get = (d, y, f) => d.byYear[y]?.[f] || 0;
   const rows = [...drugs].sort(
@@ -415,14 +431,16 @@ function HospDrugs({ drugs, prevYear, curYear }) {
   return (
     <section className="card overflow-hidden">
       <h2 className="border-b border-gray-100 px-6 py-4 text-lg font-bold text-gray-800">
-        รายการยาที่จ่าย ({rows.length} กลุ่ม)
+        รายการยาที่จ่าย ({rows.length} รหัส 24 หลัก)
       </h2>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gradient-to-r from-emerald-50 to-teal-50 text-left text-emerald-900">
             <tr>
+              <th className="px-4 py-3 font-semibold">รหัส 24 หลัก</th>
+              <th className="px-4 py-3 font-semibold">ชื่อยา</th>
+              <th className="whitespace-nowrap px-4 py-3 text-center font-semibold">รหัสที่มาของยา</th>
               <th className="px-4 py-3 font-semibold">กลุ่มยา (11 หลัก)</th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ราคา/course</th>
               {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC {prevYear}</th>}
               <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC {curYear}</th>
               {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">มูลค่า {prevYear}</th>}
@@ -434,12 +452,19 @@ function HospDrugs({ drugs, prevYear, curYear }) {
             {rows.map((d) => {
               const unmatched = d.price === null;
               return (
-                <tr key={`${d.code11}-${d.price}`} className={unmatched ? 'bg-gray-50 text-gray-500' : 'hover:bg-emerald-50/50'}>
+                <tr key={d.code24} className={unmatched ? 'bg-gray-50 text-gray-500' : 'hover:bg-emerald-50/50'}>
+                  <td className="px-4 py-3">
+                    <Code24 d={d} />
+                  </td>
+                  <td className="px-4 py-3">{d.drug_name || '-'}</td>
+                  <td className="mono px-4 py-3 text-center">{d.source_code || '-'}</td>
                   <td className="px-4 py-3">
                     <div className="font-semibold">{d.full_name || 'ไม่อยู่ในกลุ่มที่คิดตัวชี้วัด'}</div>
-                    <div className="mono text-xs text-gray-500">{d.code11 || d.sample_did || '-'}</div>
+                    <div className="text-xs text-gray-500">
+                      <span className="mono">{d.code11 || '-'}</span>
+                      {!unmatched && ` · ${num(d.price)} บาท/course`}
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-right">{unmatched ? '-' : num(d.price)}</td>
                   {prevYear && <td className="px-4 py-3 text-right">{num(get(d, prevYear, 'vs_uc'))}</td>}
                   <td className="px-4 py-3 text-right">{num(get(d, curYear, 'vs_uc'))}</td>
                   {prevYear && <td className="whitespace-nowrap px-4 py-3 text-right">{num(get(d, prevYear, 'kpi_value'))}</td>}
@@ -455,6 +480,75 @@ function HospDrugs({ drugs, prevYear, curYear }) {
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+// รหัส 24 หลักที่ไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก — แยกแสดงต่างหาก
+function NotFound24({ items, q, prevYear, curYear }) {
+  const total = items.total ?? items.length;
+  const isHosp = q.view === 'hosp';
+  const get = (d, y, f) => d.byYear[y]?.[f] || 0;
+  const csv = `/api/kpi/not-found-24?${new URLSearchParams(Object.entries(q).filter(([, v]) => v))}`;
+  return (
+    <section className="card mt-6 overflow-hidden border border-amber-200">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-100 bg-amber-50/60 px-6 py-4">
+        <div>
+          <h2 className="text-lg font-bold text-amber-900">รหัส 24 หลักที่ไม่พบข้อมูล ({num(total)} รหัส)</h2>
+          <p className="text-xs text-amber-800">
+            ไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก จึงไม่มีชื่อยาและรหัสที่มาของยา
+            {total > items.length && ` · แสดง ${num(items.length)} รหัสแรก (เรียงตามครั้ง UC ปี ${curYear})`}
+          </p>
+        </div>
+        {total > 0 && (
+          <a href={csv} className="rounded-xl border border-amber-300 bg-white px-3 py-1.5 text-sm text-amber-800 hover:bg-amber-100">
+            ดาวน์โหลด CSV ทั้งหมด
+          </a>
+        )}
+      </div>
+      {total === 0 ? (
+        <div className="px-6 py-6 text-center text-sm text-gray-500">พบรหัส 24 หลักครบทุกรายการ</div>
+      ) : (
+        <div className="max-h-[36rem] overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-amber-50 text-left text-amber-900">
+              <tr>
+                <th className="px-4 py-3 font-semibold">#</th>
+                <th className="px-4 py-3 font-semibold">รหัส 24 หลัก</th>
+                <th className="px-4 py-3 font-semibold">กลุ่มยา (11 หลัก)</th>
+                {!isHosp && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">หน่วยบริการ</th>}
+                {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC {prevYear}</th>}
+                <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC {curYear}</th>
+                {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">มูลค่า {prevYear}</th>}
+                <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">มูลค่า {curYear}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {items.map((d, i) => (
+                <tr key={d.code24} className="hover:bg-amber-50/40">
+                  <td className="px-4 py-2 text-gray-400">{i + 1}</td>
+                  <td className="px-4 py-2">
+                    <Code24 d={d} />
+                  </td>
+                  <td className="px-4 py-2">
+                    {d.price === null ? <span className="text-gray-400">ไม่อยู่ในกลุ่มที่คิดตัวชี้วัด</span> : d.full_name}
+                    <div className="mono text-xs text-gray-500">{d.code11 || '-'}</div>
+                  </td>
+                  {!isHosp && (
+                    <td className="px-4 py-2 text-right">
+                      {num(Math.max(get(d, prevYear, 'hosp_count'), get(d, curYear, 'hosp_count')))}
+                    </td>
+                  )}
+                  {prevYear && <td className="px-4 py-2 text-right">{num(get(d, prevYear, 'vs_uc'))}</td>}
+                  <td className="px-4 py-2 text-right">{num(get(d, curYear, 'vs_uc'))}</td>
+                  {prevYear && <td className="whitespace-nowrap px-4 py-2 text-right">{num(get(d, prevYear, 'kpi_value'))}</td>}
+                  <td className="whitespace-nowrap px-4 py-2 text-right font-semibold">{num(get(d, curYear, 'kpi_value'))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }

@@ -8,10 +8,16 @@ const fs = require('fs');
 const XLSX = require('xlsx');
 const Database = require('better-sqlite3');
 
-const ROOT = path.join(__dirname, '..');
+// เมื่อถูก bundle โดย Next.js __dirname จะไม่ใช่โฟลเดอร์ scripts/ → ใช้โฟลเดอร์ที่รันเซิร์ฟเวอร์แทน
+const ROOT = fs.existsSync(path.join(__dirname, '..', 'publicfiles')) ? path.join(__dirname, '..') : process.cwd();
 const SRC_DIR = path.join(ROOT, 'publicfiles');
 const OPENDATA_DIR = path.join(SRC_DIR, 'opendata-2570');
 const KPI_DB_PATH = process.env.KPI_DB_PATH || path.join(ROOT, 'data', 'kpi.db');
+const HERB_DB_PATH = path.join(ROOT, 'data', 'herb.db');
+const SETTINGS_PATH = path.join(ROOT, 'data', 'kpi-settings.json');
+const MANIFEST_PATH = path.join(OPENDATA_DIR, 'manifest.json');
+const COMPARE_YEAR = 2570; // ปีที่ดึงจาก API รายวัน
+const COMPARE_FILE_RE = /^Data_2570_sttm4_(\d+)_(\d{2})-(\d{2})-(\d{2})\.xlsx$/i;
 
 const DATA_COLUMNS = ['id', 'hospcode', 'areacode', 'flag_sent', 'date_com', 'b_year', 'didstd',
   'vs_all', 'vs_uc', 'am_all', 'am_uc', 'pri_all', 'pri_uc', 'ip'];
@@ -47,6 +53,10 @@ CREATE TABLE IF NOT EXISTS kpi_hosp (
   vs_all REAL, vs_uc REAL, matched_vs_uc REAL, pri_uc REAL, kpi_value REAL,
   PRIMARY KEY (year, hospcode)
 );
+-- รหัสยา 24 หลักจากไฟล์ของกรมการแพทย์แผนไทยฯ (คัดลอกจาก data/herb.db)
+CREATE TABLE IF NOT EXISTS dtam24 (
+  code24 TEXT PRIMARY KEY, drug_name TEXT, trade_name TEXT, source_code TEXT, ttmtid TEXT, drug_type TEXT
+);
 CREATE TABLE IF NOT EXISTS kpi_files (
   year INTEGER PRIMARY KEY, file TEXT, rows INTEGER, max_date_com TEXT, imported_at TEXT
 );
@@ -69,6 +79,7 @@ function openKpiDb() {
   const db = new Database(KPI_DB_PATH);
   // WAL: เว็บอ่านได้ระหว่างที่สคริปต์กำลังเขียน (ไม่ต้องปิดเซิร์ฟเวอร์)
   db.pragma('journal_mode = WAL');
+  db.pragma('busy_timeout = 120000'); // รอได้ถ้ามีอีก process กำลังเขียนอยู่
   db.exec(SCHEMA);
   return db;
 }
@@ -121,7 +132,32 @@ function importReferences(db) {
     }
   })();
 
-  return { types: types.length, offices: byCode.size, drugs: drugs.length };
+  return { types: types.length, offices: byCode.size, drugs: drugs.length, dtam24: importDtam24(db) };
+}
+
+// รหัส 24 หลัก + รหัสที่มาของยา จาก data/herb.db (สร้างด้วย npm run import)
+// รหัส 24 หลักบางรหัสซ้ำกัน (TTMTID ต่างกัน) → รวมเป็นแถวเดียว
+function importDtam24(db) {
+  if (!fs.existsSync(HERB_DB_PATH)) {
+    console.warn('  ไม่พบ data/herb.db — ข้ามรหัส 24 หลัก (รัน npm run import ก่อน)');
+    return 0;
+  }
+  const herb = new Database(HERB_DB_PATH, { readonly: true, fileMustExist: true });
+  const rows = herb
+    .prepare(
+      `SELECT code24, MIN(drug_name) drug_name, MIN(trade_name) trade_name,
+              GROUP_CONCAT(DISTINCT source_code) source_code, GROUP_CONCAT(DISTINCT ttmtid) ttmtid,
+              MIN(drug_type) drug_type
+         FROM drug_codes WHERE code24 IS NOT NULL GROUP BY code24`
+    )
+    .all();
+  herb.close();
+  db.transaction(() => {
+    db.exec('DELETE FROM dtam24');
+    const ins = db.prepare('INSERT INTO dtam24 VALUES (@code24, @drug_name, @trade_name, @source_code, @ttmtid, @drug_type)');
+    for (const r of rows) ins.run(r);
+  })();
+  return rows.length;
 }
 
 // นำเข้าแถวข้อมูล sttm4 ของปีงบประมาณ year (แทนที่ข้อมูลปีนั้นทั้งหมด)
@@ -205,7 +241,94 @@ function latestFile(dir, pattern) {
   return files.length ? path.join(dir, files[0].f) : null;
 }
 
+// ---------- ตั้งค่า: ปี 2570 ใช้ไฟล์ไหนเปรียบเทียบ ----------
+// data/kpi-settings.json  { "compareFile": "latest" | "<ชื่อไฟล์ใน opendata-2570>" }
+
+function readJson(file, fallback) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJsonAtomic(file, data) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = `${file}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+  fs.renameSync(tmp, file);
+}
+
+function readSettings() {
+  const s = readJson(SETTINGS_PATH, {});
+  return { compareFile: typeof s.compareFile === 'string' && s.compareFile ? s.compareFile : 'latest' };
+}
+
+function writeSettings(settings) {
+  writeJsonAtomic(SETTINGS_PATH, { ...readSettings(), ...settings, updatedAt: new Date().toISOString() });
+}
+
+// ไฟล์รายวันของปี 2570 เรียงจากใหม่ไปเก่า (ตามวันที่ในชื่อไฟล์ แล้วตามเวลาแก้ไข)
+function listCompareFiles() {
+  if (!fs.existsSync(OPENDATA_DIR)) return [];
+  const manifest = readJson(MANIFEST_PATH, {});
+  return fs
+    .readdirSync(OPENDATA_DIR)
+    .map((name) => {
+      const m = COMPARE_FILE_RE.exec(name);
+      if (!m) return null;
+      const st = fs.statSync(path.join(OPENDATA_DIR, name));
+      return {
+        name,
+        rows: Number(m[1]),
+        stamp: `${m[2]}-${m[3]}-${m[4]}`,
+        sortKey: `${m[4]}${m[3]}${m[2]}`,
+        size: st.size,
+        mtime: st.mtimeMs,
+        fetchYear: manifest[name]?.fetchYear ?? null,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.sortKey.localeCompare(a.sortKey) || b.mtime - a.mtime);
+}
+
+// ไฟล์ที่ต้องใช้ตามการตั้งค่า (ไฟล์ที่เลือกถูกลบไปแล้ว → ใช้ไฟล์ล่าสุด)
+function resolveCompareFile(settings = readSettings()) {
+  const files = listCompareFiles();
+  const picked = settings.compareFile !== 'latest' && files.find((f) => f.name === settings.compareFile);
+  const f = picked || files[0];
+  return f ? path.join(OPENDATA_DIR, f.name) : null;
+}
+
+// บันทึกว่าไฟล์รายวันแต่ละไฟล์ดึงมาจาก API ปีไหน
+function recordManifest(name, info) {
+  const manifest = readJson(MANIFEST_PATH, {});
+  manifest[name] = info;
+  writeJsonAtomic(MANIFEST_PATH, manifest);
+}
+
+function loadedFile(db, year) {
+  return db.prepare('SELECT file FROM kpi_files WHERE year = ?').get(year)?.file ?? null;
+}
+
+// นำเข้าไฟล์ปี 2570 ตามการตั้งค่า ถ้ายังไม่ใช่ไฟล์ที่โหลดอยู่ (force = นำเข้าใหม่แม้เป็นไฟล์เดิม)
+function syncCompareYear(db, { force = false, log = console.log } = {}) {
+  const file = resolveCompareFile();
+  if (!file) {
+    log(`ปี ${COMPARE_YEAR}: ไม่พบไฟล์ใน ${path.relative(ROOT, OPENDATA_DIR)} — ข้าม`);
+    return null;
+  }
+  const name = path.basename(file);
+  if (!force && loadedFile(db, COMPARE_YEAR) === name) {
+    log(`ปี ${COMPARE_YEAR}: ใช้ ${name} อยู่แล้ว`);
+    return null;
+  }
+  log(`ปี ${COMPARE_YEAR}: นำเข้า ${name}`);
+  return importYearFile(db, COMPARE_YEAR, file);
+}
+
 module.exports = {
-  ROOT, SRC_DIR, OPENDATA_DIR, KPI_DB_PATH, DATA_COLUMNS,
+  ROOT, SRC_DIR, OPENDATA_DIR, KPI_DB_PATH, SETTINGS_PATH, DATA_COLUMNS, COMPARE_YEAR, COMPARE_FILE_RE,
   openKpiDb, importReferences, importYearRows, importYearFile, latestFile,
+  readSettings, writeSettings, listCompareFiles, resolveCompareFile, recordManifest, loadedFile, syncCompareYear,
 };

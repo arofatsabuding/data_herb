@@ -10,3 +10,5 @@ data/*.tmp
 *.log
 publicfiles/opendata-2570/*.xlsx
 logs/
+data/*.json
+publicfiles/opendata-2570/manifest.json

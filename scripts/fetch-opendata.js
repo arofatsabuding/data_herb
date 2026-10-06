@@ -1,19 +1,24 @@
 // ดึงข้อมูล s_ttm4 จาก opendata.moph.go.th ทุกจังหวัด แล้วบันทึกเป็น Excel รายวันใน publicfiles/opendata-2570/
 // ชื่อไฟล์: Data_<ปีที่บันทึก>_sttm4_<จำนวนแถว>_<dd-mm-yy พ.ศ.>.xlsx  (รูปแบบเดียวกับ Data_2569_sttm4_195692_08-09-69.xlsx)
-// จากนั้นนำเข้า data/kpi.db ทันที
+// จากนั้นนำเข้า data/kpi.db (ถ้าตั้งค่าให้ใช้ไฟล์ล่าสุด)
 //
 // ใช้งาน: npm run fetch:opendata
 // ตั้งค่า (env):
-//   OPENDATA_FETCH_YEAR  ปีที่ส่งให้ API          (ค่าเริ่มต้น 2569 — ระหว่างรอข้อมูลปี 2570)
-//   OPENDATA_SAVE_YEAR   ปีที่ใช้ตั้งชื่อไฟล์/รายงาน (ค่าเริ่มต้น 2570)
+//   OPENDATA_FETCH_YEAR  ปีที่ส่งให้ API (ค่าเริ่มต้น auto = ใช้ 2570 ถ้า API มีข้อมูลแล้ว
+//                        ถ้ายังไม่มี ใช้ OPENDATA_FALLBACK_YEAR แทน)
+//   OPENDATA_FALLBACK_YEAR  ปีที่ใช้แทนระหว่างที่ API ยังไม่มีข้อมูลปี 2570 (ค่าเริ่มต้น 2569, none = ไม่ดึง)
 const fs = require('fs');
 const path = require('path');
 const XLSX = require('xlsx');
 const kpi = require('./kpi-lib');
 
 const API_URL = 'https://opendata.moph.go.th/api/report_data';
-const FETCH_YEAR = process.env.OPENDATA_FETCH_YEAR || '2569';
-const SAVE_YEAR = Number(process.env.OPENDATA_SAVE_YEAR || 2570);
+const SAVE_YEAR = kpi.COMPARE_YEAR;
+const FETCH_YEAR_SETTING = (process.env.OPENDATA_FETCH_YEAR || 'auto').trim();
+const FALLBACK_YEAR = (process.env.OPENDATA_FALLBACK_YEAR || '2569').trim();
+let FETCH_YEAR = String(SAVE_YEAR);
+// จังหวัดที่ใช้ตรวจว่า API มีข้อมูลปีนั้นแล้วหรือยัง
+const PROBE_PROVINCES = ['10', '30', '50', '57', '90'];
 
 const PROVINCES = [
   '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
@@ -191,8 +196,30 @@ function writeExcel(rows) {
   return file;
 }
 
+// API มีข้อมูลของปีนี้แล้วหรือยัง (ดูจากจังหวัดตัวอย่าง)
+async function apiHasYear(year) {
+  for (const province of PROBE_PROVINCES) {
+    const { status, data } = await postJson({ tableName: 's_ttm4', year: String(year), province, type: 'json', limit: 1, offset: 0 });
+    if (status >= 200 && status < 300 && (Number(data?.total) > 0 || parseResponseData(data).length > 0)) return true;
+  }
+  return false;
+}
+
+async function chooseFetchYear() {
+  if (FETCH_YEAR_SETTING !== 'auto') return FETCH_YEAR_SETTING;
+  if (await apiHasYear(SAVE_YEAR)) return String(SAVE_YEAR);
+  if (FALLBACK_YEAR === 'none') return null;
+  log(`API ยังไม่มีข้อมูลปี ${SAVE_YEAR} — ใช้ข้อมูลปี ${FALLBACK_YEAR} แทนชั่วคราว`);
+  return FALLBACK_YEAR;
+}
+
 async function main() {
   const started = Date.now();
+  FETCH_YEAR = await chooseFetchYear();
+  if (!FETCH_YEAR) {
+    log(`API ยังไม่มีข้อมูลปี ${SAVE_YEAR} — ไม่ดึงข้อมูล (OPENDATA_FALLBACK_YEAR=none)`);
+    return;
+  }
   log(`เริ่มดึงข้อมูล s_ttm4 ปี ${FETCH_YEAR} → บันทึกเป็นปี ${SAVE_YEAR}`);
   const { rows, failed, errors } = await fetchAllProvinces();
 
@@ -209,15 +236,21 @@ async function main() {
 
   const file = writeExcel(rows);
   log(`บันทึก ${path.relative(kpi.ROOT, file)} (${rows.length} แถว)`);
+  kpi.recordManifest(path.basename(file), { fetchYear: Number(FETCH_YEAR), rows: rows.length, fetchedAt: new Date().toISOString() });
 
+  // นำเข้า kpi.db ตามการตั้งค่า: "ใช้ไฟล์ล่าสุด" → ไฟล์นี้ / เลือกไฟล์ไว้ → คงไฟล์เดิม
   const db = kpi.openKpiDb();
   kpi.importReferences(db);
-  const s = kpi.importYearRows(db, SAVE_YEAR, rows, path.basename(file));
+  const target = kpi.resolveCompareFile();
+  if (target && path.basename(target) === path.basename(file)) {
+    const s = kpi.importYearRows(db, SAVE_YEAR, rows, path.basename(file));
+    log(`นำเข้า kpi.db ปี ${SAVE_YEAR}: ${s.hosp} หน่วยบริการ · มูลค่า ${Math.round(s.kpi).toLocaleString()} บาท`);
+  } else {
+    log(`การตั้งค่าเลือกไฟล์ ${target ? path.basename(target) : '-'} ไว้ — ไม่เปลี่ยนข้อมูลที่ใช้เปรียบเทียบ`);
+    kpi.syncCompareYear(db, { log });
+  }
   db.close();
-  log(
-    `นำเข้า kpi.db ปี ${SAVE_YEAR}: ${s.hosp} หน่วยบริการ · มูลค่า ${Math.round(s.kpi).toLocaleString()} บาท ` +
-      `(ใช้เวลา ${Math.round((Date.now() - started) / 1000)} วินาที)`
-  );
+  log(`เสร็จสิ้น (ใช้เวลา ${Math.round((Date.now() - started) / 1000)} วินาที)`);
 }
 
 main().catch((err) => {
