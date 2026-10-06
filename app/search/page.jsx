@@ -16,10 +16,11 @@ export default async function SearchPage({ searchParams }) {
   const unit = sp.unit || '';
   const name = sp.name || '';
   const mfr = sp.mfr || '';
-  const result = searchDrugs({ q, type, group, unit, name, mfr, page: sp.page });
-  const options = listFilterOptions({ q, type, group, unit, name, mfr });
+  const src = sp.src || '';
+  const result = searchDrugs({ q, type, group, unit, name, mfr, src, page: sp.page });
+  const options = listFilterOptions({ q, type, group, unit, name, mfr, src });
 
-  const filters = Object.fromEntries(Object.entries({ q, type, group, unit, name, mfr }).filter(([, v]) => v));
+  const filters = Object.fromEntries(Object.entries({ q, type, group, unit, name, mfr, src }).filter(([, v]) => v));
   const exportHref = `/api/export?${new URLSearchParams(filters)}`;
   const from = (result.page - 1) * result.pageSize + 1;
   const to = from + result.rows.length - 1;
@@ -34,6 +35,7 @@ export default async function SearchPage({ searchParams }) {
         group={['has', 'none'].includes(group) ? group : ''}
         name={name}
         mfr={mfr}
+        src={src}
         options={options}
         compact
       />

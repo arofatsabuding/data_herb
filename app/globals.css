@@ -28,3 +28,25 @@
     @apply font-mono tracking-tight;
   }
 }
+
+/* แถบโหลดด้านบนจอ (NavProgress) */
+.nav-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 60;
+  height: 3px;
+  overflow: hidden;
+  background: rgb(209 250 229);
+}
+.nav-progress::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, #10b981, #0d9488);
+  animation: nav-progress 1.1s ease-in-out infinite;
+}
+@keyframes nav-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}

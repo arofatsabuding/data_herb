@@ -32,7 +32,7 @@ const cell = (v) => {
 
 export function GET(request) {
   const sp = request.nextUrl.searchParams;
-  const filters = Object.fromEntries(['q', 'type', 'group', 'unit', 'name', 'mfr'].map((k) => [k, sp.get(k) || '']));
+  const filters = Object.fromEntries(['q', 'type', 'group', 'unit', 'name', 'mfr', 'src'].map((k) => [k, sp.get(k) || '']));
 
   const BOM = String.fromCharCode(0xfeff); // ให้ Excel อ่านภาษาไทยถูก
   const lines = [BOM + COLUMNS.map(([, h]) => h).join(',')];

@@ -8,7 +8,8 @@ export default function SearchForm({
   unit = '',
   name = '',
   mfr = '',
-  options = { names: [], manufacturers: [] },
+  src = '',
+  options = { names: [], manufacturers: [], sources: [] },
   compact = false,
 }) {
   return (
@@ -49,7 +50,7 @@ export default function SearchForm({
         </button>
       </div>
       {compact && (
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_14rem]">
           <select name="name" defaultValue={name} className="input min-w-0" aria-label="ชื่อยา">
             <option value="">ทุกชื่อยา ({options.names.length.toLocaleString('th-TH')})</option>
             {options.names.map((v) => (
@@ -61,6 +62,14 @@ export default function SearchForm({
           <select name="mfr" defaultValue={mfr} className="input min-w-0" aria-label="ผู้ผลิต">
             <option value="">ทุกผู้ผลิต ({options.manufacturers.length.toLocaleString('th-TH')})</option>
             {options.manufacturers.map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
+          </select>
+          <select name="src" defaultValue={src} className="input min-w-0" aria-label="รหัสที่มาของยา">
+            <option value="">ทุกรหัสที่มาของยา ({options.sources.length.toLocaleString('th-TH')})</option>
+            {options.sources.map((v) => (
               <option key={v} value={v}>
                 {v}
               </option>
