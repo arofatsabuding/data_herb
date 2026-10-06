@@ -1,5 +1,8 @@
+import { cookies } from 'next/headers';
 import Link from 'next/link';
+import KpiSummary from '@/components/KpiSummary';
 import { getBreakdown, getStats } from '@/lib/drugs';
+import { PREF_COOKIE, kpiAvailable, parsePrefs, resolveSets } from '@/lib/kpi';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,8 +53,10 @@ function BreakdownTable({ title, rows, param = 'q' }) {
   );
 }
 
-export default function StatsPage() {
+export default async function StatsPage() {
   const s = getStats();
+  // ตัวชี้วัดใช้ไฟล์ตามที่ผู้ใช้คนนี้เลือกไว้ในหน้า /kpi (ไฟล์ที่ยังไม่ได้นำเข้า → ใช้ไฟล์ที่มี)
+  const sets = kpiAvailable() ? resolveSets(parsePrefs((await cookies()).get(PREF_COOKIE)?.value)) : [];
   const rows = [
     ['รายการทั้งหมด', s.total],
     ['พบ TTMTID ใน Master', s.in_master],
@@ -65,6 +70,10 @@ export default function StatsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-bold text-gray-800">สรุปข้อมูล</h1>
+
+      {sets.length > 0 && <KpiSummary sets={sets} />}
+
+      <h2 className="mb-4 text-xl font-bold text-gray-800">ข้อมูลรหัสยาแผนไทย 24 หลัก</h2>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map(([label, value]) => (

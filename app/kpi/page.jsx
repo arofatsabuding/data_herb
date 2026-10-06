@@ -1,5 +1,7 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
+import Change from '@/components/KpiChange';
+import KpiCodeErrors from '@/components/KpiCodeErrors';
 import KpiDataBar from '@/components/KpiDataBar';
 import KpiFilter from '@/components/KpiFilter';
 import {
@@ -10,13 +12,13 @@ import {
   PREF_COOKIE,
   VIEWS,
   getAreaOptions,
+  getCodeErrors,
   getCompareReport,
   getDatasets,
   getOfficeTypes,
   kpiAvailable,
   parseKpiQuery,
   parsePrefs,
-  pctChange,
   resolveSets,
   sumByYear,
 } from '@/lib/kpi';
@@ -41,25 +43,6 @@ function kpiHref(params) {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v) sp.set(k, v);
   return `/kpi?${sp}`;
-}
-
-// ป้ายร้อยละการเปลี่ยนแปลง: เขียว = เพิ่ม, แดง = ลด
-function Change({ prev, cur, size = 'sm' }) {
-  const pct = pctChange(prev, cur);
-  const big = size === 'lg';
-  const base = `inline-flex items-center gap-1 whitespace-nowrap rounded-full font-semibold ${
-    big ? 'px-4 py-1.5 text-lg' : 'px-2 py-0.5 text-xs'
-  }`;
-  if (pct === null) return <span className={`${base} bg-sky-100 text-sky-700`}>ใหม่</span>;
-  const up = pct > 0.005;
-  const down = pct < -0.005;
-  const color = up ? 'bg-emerald-100 text-emerald-700' : down ? 'bg-rose-100 text-rose-700' : 'bg-gray-100 text-gray-600';
-  return (
-    <span className={`${base} ${color}`}>
-      {up ? '▲' : down ? '▼' : '•'} {up ? '+' : ''}
-      {pct.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
-    </span>
-  );
 }
 
 function ShareBar({ value, max, tone = 'emerald' }) {
@@ -147,6 +130,7 @@ export default async function KpiPage({ searchParams }) {
 
   const { q, missing } = parseKpiQuery(sp);
   const report = missing ? null : getCompareReport(q, sets);
+  const codeErrors = report ? getCodeErrors(q, sets) : null;
   const options = getAreaOptions();
   const types = getOfficeTypes();
 
@@ -303,6 +287,14 @@ export default async function KpiPage({ searchParams }) {
               </div>
             )}
 
+            <KpiCodeErrors
+              data={codeErrors}
+              prevYear={prevYear}
+              curYear={curYear}
+              childLabel={VIEWS[q.view].childLabel}
+              childHref={(key) => childHref(q, VIEWS[q.view].child, key)}
+            />
+
             <NotFound24 items={report.notFound24} q={q} prevYear={prevYear} curYear={curYear} />
 
             {q.view === 'hosp' && report.area.hosp && <HospLinks h={report.area.hosp} />}
@@ -322,6 +314,7 @@ export default async function KpiPage({ searchParams }) {
               รหัส 24 หลักและรหัสที่มาของยา ตรวจกับไฟล์รหัสยาแผนไทย 24 หลัก (กรมการแพทย์แผนไทยฯ) —
               รหัสที่ไม่พบยังคิดมูลค่าตามกลุ่ม 11 หลักตามปกติ
             </li>
+            <li>อัตรารหัสยาที่ผิดพลาด = จำนวนที่รหัสไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก ÷ จำนวนทั้งหมด × 100 (นับตามรายการยา รหัสยา และครั้งที่จ่าย UC)</li>
             {sets.map(({ year, dataset: f }) => (
               <li key={year}>
                 ปี {year}: {f.file} · {num(f.rows)} แถว · ข้อมูลล่าสุด {formatDateCom(f.max_date_com)}

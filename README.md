@@ -26,13 +26,23 @@ npm run dev      # เปิด http://localhost:3000
 | `npm run fetch:opendata` | ดึงข้อมูล s_ttm4 จาก opendata.moph.go.th → บันทึก Excel ใน publicfiles/opendata-2570/ → นำเข้า kpi.db |
 | `npm run lint` | ตรวจโค้ด |
 
-## อัปเดตข้อมูลรอบใหม่
+## อัปเดตไฟล์อ้างอิง (หน้า /admin — ผู้ดูแล)
 
-1. วางไฟล์ใหม่ใน `publicfiles/`
-   - `รหัสยา24หลักทั้งหมด.xlsx` (ใช้ sheet ที่ชื่อขึ้นต้นด้วย "เดี่ยว" และ "ตำรับ")
-   - `MasterTTMT*.xls` (มีได้ไฟล์เดียว)
-   - `ttmt_drug_group.xlsx` (อัตราเบิกต่อ Drug Group: คอลัมน์ drug_group, course, unit)
-2. รัน `npm run import` แล้วรีสตาร์ทเซิร์ฟเวอร์
+อัปโหลดไฟล์ฉบับล่าสุดได้จากเมนู **ผู้ดูแล** โดยไม่ต้องปิดเซิร์ฟเวอร์ ต้องกรอกรหัสผู้ดูแล (`ADMIN_CODE` ใน `.env`
+ถ้าไม่ได้ตั้งจะใช้ `FETCH_NOW_CODE`) ระบบจะตรวจชื่อ sheet / หัวคอลัมน์ก่อน ถ้าไม่ถูกต้องจะยังใช้ไฟล์เดิม
+ไฟล์ที่อัปโหลดถูกตั้งชื่อใหม่ตามตารางด้านล่างเสมอ ไฟล์เดิมเก็บสำรองที่ `data/reference-archive/` (5 รุ่นล่าสุด)
+แล้วระบบจะสร้าง data/herb.db ใหม่ + คำนวณตัวชี้วัดทุกไฟล์ใหม่ให้เอง (ประมาณ 15 วินาที)
+
+| ไฟล์ใน publicfiles/ | ชื่อเดิม | ต้องมี |
+|---|---|---|
+| `dtam_drug_codes_24.xlsx` | รหัสยา24หลักทั้งหมด.xlsx | sheet ชื่อขึ้นต้นด้วย "เดี่ยว" และ "ตำรับ" มีคอลัมน์ TTMTID, รหัสยาแผนไทย 24 หลัก |
+| `ttmt_master.xls` (หรือ .xlsx) | MasterTTMT_THIS_20260715.xls | TTMTCode, Drug_Group_Nhso |
+| `ttmt_drug_group_rates.xlsx` | ttmt_drug_group.xlsx | drug_group, course, unit |
+| `herbal_drug_master_11.xlsx` | - | code11, full_name, course, price |
+| `health_office.xlsx` | - | code5, name, health_office_type_code, district_code, province_code, health_zone |
+| `health_office_type.xlsx` | - | code, name |
+
+หรือวางไฟล์เองใน `publicfiles/` (ใช้ชื่อตามตาราง) แล้วปิดเซิร์ฟเวอร์ รัน `npm run import` + `npm run import:kpi`
 
 ## ติดตามตัวชี้วัด (/kpi)
 
@@ -64,7 +74,9 @@ npm run dev      # เปิด http://localhost:3000
 3. ไม่นำมาคำนวณ: หน่วยบริการในเขตสุขภาพที่ 13 และหน่วยบริการที่ไม่พบเขตสุขภาพ (`EXCLUDED_ZONES` ใน `lib/kpi.js`)
 4. รหัส 24 หลักหลังล้าง → ตรวจกับไฟล์รหัสยาแผนไทย 24 หลัก (ตาราง `dtam24` คัดลอกจาก data/herb.db)
    เพื่อแสดงชื่อยาและรหัสที่มาของยา — รหัสที่ไม่พบแสดงแยกในรายงาน (ดาวน์โหลด CSV ได้)
-   ถ้าอัปเดตไฟล์รหัส 24 หลัก ให้รัน `npm run import` แล้ว `npm run import:kpi`
+   ถ้าอัปเดตไฟล์รหัส 24 หลัก ให้อัปโหลดจากหน้า /admin (หรือรัน `npm run import` แล้ว `npm run import:kpi`)
+5. อัตรารหัสยาที่ผิดพลาด = จำนวนที่รหัสไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก (รวมรหัสว่าง/ไม่ครบหลัก) ÷ ทั้งหมด × 100
+   นับ 3 แบบ: รายการยา (หน่วยบริการ × รหัสยา), รหัสยาไม่นับซ้ำ, ครั้งที่จ่ายยา UC — แสดงในหน้า /kpi และ /stats
 
 ### เลือกรายงานที่ใช้เปรียบเทียบ (dropdown ในหน้า /kpi) — แยกตามผู้ใช้
 
@@ -93,6 +105,7 @@ log อยู่ที่ `logs/opendata-YYYY-MM-DD.log` · สถานะแ�
 | ตัวแปร | ค่าเริ่มต้น | ความหมาย |
 |---|---|---|
 | `FETCH_NOW_CODE` | (ต้องตั้ง) | รหัสยืนยันสำหรับปุ่มดึงรายงาน ณ ปัจจุบัน — ไม่ตั้ง = ปุ่มใช้ไม่ได้ |
+| `ADMIN_CODE` | ใช้ `FETCH_NOW_CODE` | รหัสผู้ดูแลสำหรับอัปโหลดไฟล์อ้างอิงในหน้า /admin |
 | `OPENDATA_FETCH_YEAR` | `auto` | ปีที่ส่งให้ API — `auto` = ใช้ 2570 เมื่อ API มีข้อมูล |
 | `OPENDATA_FALLBACK_YEAR` | 2569 | ปีที่ใช้แทนระหว่างที่ API ยังไม่มีข้อมูล 2570 (`none` = ไม่ดึง) |
 | `OPENDATA_CRON` | เปิด | `off` = ปิดการดึงอัตโนมัติ (เช่น เครื่องทีมที่รัน dev) |
@@ -107,15 +120,16 @@ app/                หน้าเว็บ (Next.js App Router)
   search/           ค้นหา + ตัวกรอง + แบ่งหน้า
   drug/[id]/        รายละเอียดยา
   groups/           รายการ Drug Group
-  stats/            สรุปข้อมูล
   kpi/              ติดตามตัวชี้วัด (+ actions.js เลือกไฟล์ / ดึงข้อมูล)
+  admin/            ผู้ดูแล: อัปโหลดไฟล์อ้างอิง
+  stats/            สรุปข้อมูล (ตัวชี้วัด + รหัสยา)
   api/kpi/          ดาวน์โหลด CSV รหัส 24 หลักที่ไม่พบ
   api/export/       ดาวน์โหลด CSV
 components/         ส่วนประกอบหน้าเว็บ
 lib/drugs.js        ฟังก์ชันค้นหาข้อมูล (ใช้ร่วมกับ API/แชทบอท)
 lib/kpi.js          ฟังก์ชันสรุปตัวชี้วัด
 lib/scheduler.js    ตั้งเวลาดึงข้อมูล 22:00
-scripts/            import.js + schema.sql, import-kpi.js, fetch-opendata.js
+scripts/            import.js + schema.sql, import-kpi.js, fetch-opendata.js, reference-files.js (ชื่อไฟล์อ้างอิง + ตรวจรูปแบบ)
 publicfiles/        ไฟล์ Excel ต้นทาง
 data/herb.db        ฐานข้อมูลยา (npm run import, ไม่ commit)
 data/kpi.db         ฐานข้อมูลตัวชี้วัด (npm run import:kpi, ไม่ commit)
@@ -126,6 +140,6 @@ data/kpi.db         ฐานข้อมูลตัวชี้วัด (npm 
 - 1 แถวในฐานข้อมูล = 1 แถวใน Excel (sheet เดี่ยว + ตำรับ, ไม่ใช้ sheet ยกเลิก)
 - เชื่อม `TTMTID` กับ `TTMTCode` ใน Master
 - ถ้าไม่พบใน Master หรือไม่มีค่า `Drug_Group_Nhso` → แสดง "ไม่มี Drug Group"
-- เชื่อม Drug Group กับ `ttmt_drug_group.xlsx` → อัตราเบิกต่อ course (`course`) เป็น บาท หรือ point (`unit`)
+- เชื่อม Drug Group กับ `ttmt_drug_group_rates.xlsx` → อัตราเบิกต่อ course (`course`) เป็น บาท หรือ point (`unit`)
 - ถ้าเซิร์ฟเวอร์เปิดอยู่ ให้ปิดก่อนรัน `npm run import` (Windows ล็อกไฟล์ฐานข้อมูล)
 - รหัส 24 หลักบางรหัสซ้ำกันได้ (TTMTID ต่างกัน เช่น ขนาดบรรจุต่างกัน)

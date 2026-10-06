@@ -6,15 +6,15 @@
 
 | ไฟล์ | ที่มา | ใช้ sheet | แถว |
 |---|---|---|---|
-| `publicfiles/รหัสยา24หลักทั้งหมด.xlsx` | กรมการแพทย์แผนไทยฯ | เดี่ยว, ตำรับ (**ไม่ใช้ sheet ยกเลิก**) | 11,482 + 33,059 |
-| `publicfiles/MasterTTMT_THIS_20260715.xls` | สมสท. | l_ttmt_master_ed (ถือเป็นฉบับสมบูรณ์) | 9,470 |
-| `publicfiles/ttmt_drug_group.xlsx` | อัตราเบิกต่อ Drug Group | ttmt_drug_group (course + unit บาท/point) | 101 |
+| `publicfiles/dtam_drug_codes_24.xlsx` (เดิมชื่อ รหัสยา24หลักทั้งหมด.xlsx) | กรมการแพทย์แผนไทยฯ | เดี่ยว, ตำรับ (**ไม่ใช้ sheet ยกเลิก**) | 11,482 + 33,059 |
+| `publicfiles/ttmt_master.xls` (เดิมชื่อ MasterTTMT_THIS_20260715.xls) | สมสท. | l_ttmt_master_ed (ถือเป็นฉบับสมบูรณ์) | 9,470 |
+| `publicfiles/ttmt_drug_group_rates.xlsx` | อัตราเบิกต่อ Drug Group | ttmt_drug_group (course + unit บาท/point) | 101 |
 
 กติกาการรวม:
 - รวม sheet เดี่ยว + ตำรับ → 1 แถวต่อรหัส 24 หลัก (มี TTMTID ทุกแถว)
 - จับคู่ TTMTID ↔ `TTMTCode` ใน Master
 - ถ้า TTMTID ไม่อยู่ใน Master **หรือ** อยู่แต่ช่อง Drug_Group_Nhso ว่าง → แสดง **"ไม่มี Drug Group"**
-- เชื่อม Drug Group → `ttmt_drug_group.xlsx` ได้อัตราเบิกต่อ course: บาท 45 กลุ่ม (3,451 รายการ), point 56 กลุ่ม (1,888 รายการ) — ครอบคลุมทุกรายการที่มี Drug Group
+- เชื่อม Drug Group → `ttmt_drug_group_rates.xlsx` ได้อัตราเบิกต่อ course: บาท 45 กลุ่ม (3,451 รายการ), point 56 กลุ่ม (1,888 รายการ) — ครอบคลุมทุกรายการที่มี Drug Group
 - ผล import จริง: ทั้งหมด 44,541 รายการ · พบใน Master 9,347 · มี Drug Group 5,339 · ไม่มี Drug Group 39,202
 - **รหัส 24 หลักไม่ unique**: มี 383 รหัสที่ซ้ำกัน (848 แถว) โดยแต่ละแถวมี TTMTID ต่างกัน (เช่น ขนาดบรรจุต่างกัน) → เก็บ 1 แถวต่อ 1 แถวใน Excel และใช้ TTMTID เป็นตัวหลักในการเชื่อม
 

@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
 const Database = require('better-sqlite3');
+const { requireRefPath } = require('./reference-files');
 
 // เมื่อถูก bundle โดย Next.js __dirname จะไม่ใช่โฟลเดอร์ scripts/ → ใช้โฟลเดอร์ที่รันเซิร์ฟเวอร์แทน
 const ROOT = fs.existsSync(path.join(__dirname, '..', 'publicfiles')) ? path.join(__dirname, '..') : process.cwd();
@@ -170,9 +171,9 @@ function openKpiDb() {
 
 // ตารางอ้างอิง: หน่วยบริการ, ประเภทหน่วยบริการ, กลุ่มยา 11 หลัก, รหัส 24 หลัก
 function importReferences(db) {
-  const types = readSheet(path.join(SRC_DIR, 'health_office_type.xlsx'));
-  const offices = readSheet(path.join(SRC_DIR, 'health_office.xlsx'));
-  const drugs = readSheet(path.join(SRC_DIR, 'herbal_drug_master_11.xlsx'));
+  const types = readSheet(requireRefPath('health_office_type'));
+  const offices = readSheet(requireRefPath('health_office'));
+  const drugs = readSheet(requireRefPath('herbal_drug_master_11'));
 
   // code5 ซ้ำได้ (หน่วยเก่าที่ยกเลิกแล้ว) → เลือกแถวที่ active ก่อน
   const byCode = new Map();
@@ -289,28 +290,45 @@ function importDatasetRows(db, year, rows, fileName) {
     }
     db.prepare('UPDATE datasets SET max_date_com = ? WHERE id = ?').run(maxDate || null, ds);
 
-    // สรุประดับหน่วยบริการ
-    db.prepare(
-      `INSERT INTO kpi_hosp
-       SELECT s.ds, s.hospcode,
-              COALESCE(h.name, 'ไม่พบรหัส ' || s.hospcode), h.type_code, t.name,
-              h.district_code, h.district, h.province_code, h.province, h.health_zone,
-              COUNT(*), SUM(s.price IS NOT NULL),
-              SUM(s.vs_all), SUM(s.vs_uc),
-              SUM(CASE WHEN s.price IS NOT NULL THEN s.vs_uc ELSE 0 END),
-              SUM(s.pri_uc), SUM(s.kpi_value)
-         FROM sttm4 s
-         LEFT JOIN health_office h ON h.code5 = s.hospcode
-         LEFT JOIN health_office_type t ON t.code = h.type_code
-        WHERE s.ds = ?
-        GROUP BY s.hospcode`
-    ).run(ds);
+    buildKpiHosp(db, ds);
   })();
 
   const s = db
     .prepare('SELECT COUNT(*) hosp, SUM(rows) rows, SUM(matched_rows) matched, SUM(kpi_value) kpi FROM kpi_hosp WHERE ds = ?')
     .get(ds);
   return { ds, ...s };
+}
+
+// สรุประดับหน่วยบริการของ dataset นั้น (ชื่อ/พื้นที่ ตามตาราง health_office ปัจจุบัน)
+function buildKpiHosp(db, ds) {
+  db.prepare('DELETE FROM kpi_hosp WHERE ds = ?').run(ds);
+  db.prepare(
+    `INSERT INTO kpi_hosp
+     SELECT s.ds, s.hospcode,
+            COALESCE(h.name, 'ไม่พบรหัส ' || s.hospcode), h.type_code, t.name,
+            h.district_code, h.district, h.province_code, h.province, h.health_zone,
+            COUNT(*), SUM(s.price IS NOT NULL),
+            SUM(s.vs_all), SUM(s.vs_uc),
+            SUM(CASE WHEN s.price IS NOT NULL THEN s.vs_uc ELSE 0 END),
+            SUM(s.pri_uc), SUM(s.kpi_value)
+       FROM sttm4 s
+       LEFT JOIN health_office h ON h.code5 = s.hospcode
+       LEFT JOIN health_office_type t ON t.code = h.type_code
+      WHERE s.ds = ?
+      GROUP BY s.hospcode`
+  ).run(ds);
+}
+
+// คำนวณทุก dataset ใหม่ด้วยตารางอ้างอิงปัจจุบัน (ราคากลุ่มยา 11 หลัก, หน่วยบริการ) โดยไม่ต้องอ่าน Excel ซ้ำ
+// ใช้หลังผู้ดูแลอัปโหลดไฟล์อ้างอิงใหม่
+function recomputeDatasets(db) {
+  const ids = db.prepare('SELECT id FROM datasets ORDER BY id').all().map((d) => d.id);
+  db.transaction(() => {
+    db.exec(`UPDATE sttm4 SET price = (SELECT m.price FROM herbal_drug_master_11 m WHERE m.code11 = sttm4.code11);
+             UPDATE sttm4 SET kpi_value = CASE WHEN price IS NULL THEN 0 ELSE vs_uc * price END;`);
+    for (const ds of ids) buildKpiHosp(db, ds);
+  })();
+  return ids.length;
 }
 
 function importDatasetFile(db, year, fileName) {
@@ -411,6 +429,6 @@ function updateFetchRound(date, patch) {
 module.exports = {
   ROOT, SRC_DIR, KPI_DB_PATH, DATA_COLUMNS, FETCH_YEAR_TARGET,
   yearDir, listYears, listFiles, filePath, recordManifest,
-  openKpiDb, importReferences, ensureReferences, importDatasetRows, importDatasetFile, pruneDatasets,
+  openKpiDb, importReferences, ensureReferences, importDatasetRows, recomputeDatasets, importDatasetFile, pruneDatasets,
   readFetchStatus, updateFetchRound, fetchLockInfo, acquireFetchLock, releaseFetchLock,
 };

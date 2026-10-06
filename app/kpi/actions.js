@@ -1,9 +1,9 @@
 'use server';
 
-import crypto from 'crypto';
 import { cookies } from 'next/headers';
 import { PREF_COOKIE, getDatasets, parsePrefs } from '@/lib/kpi';
 import { ensureImported, fetchInProgress, runFetchNow } from '@/lib/scheduler';
+import { checkCode } from '@/lib/confirm-code';
 import kpiLib from '@/scripts/kpi-lib';
 
 // เลือกไฟล์ข้อมูลของปีนั้น (เก็บใน cookie ของเบราว์เซอร์ — ไม่กระทบผู้ใช้คนอื่น)
@@ -36,13 +36,8 @@ export async function checkFetch() {
 export async function fetchNow(prevState, formData) {
   const busy = fetchInProgress();
   if (busy) return { busy };
-  const expected = process.env.FETCH_NOW_CODE;
-  if (!expected) return { error: 'เซิร์ฟเวอร์ยังไม่ได้ตั้งรหัสยืนยัน (FETCH_NOW_CODE ใน .env)' };
-  const hash = (s) => crypto.createHash('sha256').update(String(s)).digest();
-  if (!crypto.timingSafeEqual(hash(formData.get('code') || ''), hash(expected))) {
-    await new Promise((r) => setTimeout(r, 1500)); // หน่วงเวลา กันการเดารหัส
-    return { error: 'รหัสยืนยันไม่ถูกต้อง — ไม่ได้ดึงข้อมูล' };
-  }
+  const check = await checkCode(formData.get('code'), ['FETCH_NOW_CODE']);
+  if (check.error) return { error: check.wrong ? 'รหัสยืนยันไม่ถูกต้อง — ไม่ได้ดึงข้อมูล' : check.error };
   // ตรวจซ้ำอีกครั้งตอนสั่ง เผื่อมีคนกดพร้อมกัน
   if (!runFetchNow()) return { busy: fetchInProgress() || { by: 'ผู้ใช้อื่น' } };
   return { started: true };

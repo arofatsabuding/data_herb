@@ -45,7 +45,7 @@ CREATE TABLE ttmt_master (
 );
 CREATE INDEX idx_master_group ON ttmt_master(drug_group_nhso);
 
--- อัตราเบิกของแต่ละ Drug Group (จาก ttmt_drug_group.xlsx)
+-- อัตราเบิกของแต่ละ Drug Group (จาก ttmt_drug_group_rates.xlsx)
 CREATE TABLE drug_group_rates (
   drug_group TEXT PRIMARY KEY,
   course     REAL,      -- จำนวนที่เบิกได้ต่อ course

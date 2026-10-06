@@ -1,18 +1,19 @@
 // อ่านไฟล์ Excel ในโฟลเดอร์ publicfiles/ แล้วสร้างฐานข้อมูล SQLite ใหม่ที่ data/herb.db
 // ใช้งาน: npm run import
+//   --no-swap  สร้างไว้ที่ data/herb.db.tmp แล้วให้เซิร์ฟเวอร์สลับไฟล์เอง (ใช้ตอนผู้ดูแลอัปโหลดไฟล์ใหม่)
 const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
 const Database = require('better-sqlite3');
+const { requireRefPath } = require('./reference-files');
 
 const ROOT = path.join(__dirname, '..');
-const SRC_DIR = path.join(ROOT, 'publicfiles');
 const DB_PATH = path.join(ROOT, 'data', 'herb.db');
+const NO_SWAP = process.argv.includes('--no-swap');
 
-const CODES_FILE = path.join(SRC_DIR, 'รหัสยา24หลักทั้งหมด.xlsx');
-const MASTER_FILE = fs.readdirSync(SRC_DIR).find((f) => /^MasterTTMT.*\.xlsx?$/i.test(f));
-if (!MASTER_FILE) throw new Error('ไม่พบไฟล์ MasterTTMT*.xls ในโฟลเดอร์ publicfiles/');
-const RATES_FILE = path.join(SRC_DIR, 'ttmt_drug_group.xlsx');
+const CODES_FILE = requireRefPath('dtam_codes');
+const MASTER_FILE = requireRefPath('ttmt_master');
+const RATES_FILE = requireRefPath('drug_group_rates');
 
 // ล้างช่องว่าง/ขึ้นบรรทัด และแปลงทุกค่าเป็นข้อความ (กันเลข 0 นำหน้าหาย)
 const clean = (v) => {
@@ -77,7 +78,7 @@ function readCodes() {
 }
 
 function readMaster() {
-  const wb = XLSX.readFile(path.join(SRC_DIR, MASTER_FILE));
+  const wb = XLSX.readFile(MASTER_FILE);
   const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: null });
   return data
     .map((r) => ({
@@ -127,10 +128,10 @@ function insertAll(db, table, columns, rows) {
 function main() {
   console.log('อ่านไฟล์รหัส 24 หลัก...');
   const codes = readCodes();
-  console.log(`อ่าน ${MASTER_FILE}...`);
+  console.log(`อ่าน ${path.basename(MASTER_FILE)}...`);
   const master = readMaster();
   console.log(`  master: ${master.length} แถว`);
-  console.log('อ่าน ttmt_drug_group.xlsx...');
+  console.log(`อ่าน ${path.basename(RATES_FILE)}...`);
   const rates = readRates();
   console.log(`  อัตราเบิก: ${rates.length} Drug Group`);
 
@@ -146,24 +147,29 @@ function main() {
   const meta = db.prepare('INSERT INTO meta (key, value) VALUES (?, ?)');
   meta.run('imported_at', new Date().toISOString());
   meta.run('codes_file', path.basename(CODES_FILE));
-  meta.run('master_file', MASTER_FILE);
+  meta.run('master_file', path.basename(MASTER_FILE));
   meta.run('rates_file', path.basename(RATES_FILE));
 
   const s = db
     .prepare('SELECT COUNT(*) total, SUM(in_master) in_master, SUM(has_drug_group) with_group, SUM(reimburse_unit IS NOT NULL) with_rate FROM drug_lookup')
     .get();
   db.close();
-  try {
-    fs.renameSync(tmp, DB_PATH);
-  } catch (err) {
-    if (err.code === 'EPERM' || err.code === 'EBUSY') {
-      console.error('\nเขียนทับ data/herb.db ไม่ได้ — ไฟล์ถูกเปิดอยู่ ให้ปิดเซิร์ฟเวอร์ (npm run dev / npm start) แล้วรันใหม่');
-      process.exit(1);
+  if (!NO_SWAP) {
+    try {
+      fs.renameSync(tmp, DB_PATH);
+    } catch (err) {
+      if (err.code === 'EPERM' || err.code === 'EBUSY') {
+        console.error(
+          '\nเขียนทับ data/herb.db ไม่ได้ — ไฟล์ถูกเปิดอยู่ ให้ปิดเซิร์ฟเวอร์ (npm run dev / npm start) แล้วรันใหม่' +
+            '\nหรืออัปโหลดไฟล์จากหน้า /admin ระหว่างที่เซิร์ฟเวอร์เปิดอยู่'
+        );
+        process.exit(1);
+      }
+      throw err;
     }
-    throw err;
   }
 
-  console.log(`\nสร้าง ${path.relative(ROOT, DB_PATH)} เรียบร้อย`);
+  console.log(`\nสร้าง ${path.relative(ROOT, NO_SWAP ? tmp : DB_PATH)} เรียบร้อย${NO_SWAP ? ' (รอเซิร์ฟเวอร์สลับไฟล์)' : ''}`);
   console.log(`  รายการทั้งหมด      : ${s.total}`);
   console.log(`  พบใน Master        : ${s.in_master}`);
   console.log(`  มี Drug Group       : ${s.with_group}`);

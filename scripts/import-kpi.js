@@ -5,6 +5,8 @@
 //       + ไฟล์ล่าสุดของทุกโฟลเดอร์ publicfiles/opendata-<ปี>/ + ไฟล์ที่เคยนำเข้าไว้แล้ว (คำนวณใหม่)
 //   node scripts/import-kpi.js --year 2570 --file Data_2570_sttm4_....xlsx
 //       นำเข้าเฉพาะไฟล์นี้ ถ้ายังไม่มีในฐานข้อมูล (หน้าเว็บเรียกใช้เมื่อผู้ใช้เลือกไฟล์)
+//   node scripts/import-kpi.js --references
+//       นำเข้าตารางอ้างอิงใหม่ แล้วคำนวณทุกไฟล์ในฐานข้อมูลใหม่ (หน้าผู้ดูแลเรียกใช้หลังอัปโหลดไฟล์)
 // ไม่ต้องปิดเซิร์ฟเวอร์
 const kpi = require('./kpi-lib');
 
@@ -26,7 +28,14 @@ function main() {
   const year = Number(arg('year'));
   const file = arg('file');
 
-  if (file) {
+  if (process.argv.includes('--references')) {
+    console.log('นำเข้าตารางอ้างอิง...');
+    const ref = kpi.importReferences(db);
+    console.log(
+      `  ประเภทหน่วยบริการ ${ref.types} · หน่วยบริการ ${ref.offices} · กลุ่มยา 11 หลัก ${ref.drugs} · รหัส 24 หลัก ${ref.dtam24}`
+    );
+    console.log(`คำนวณใหม่ ${kpi.recomputeDatasets(db)} ไฟล์`);
+  } else if (file) {
     kpi.ensureReferences(db);
     if (db.prepare('SELECT 1 FROM datasets WHERE file = ?').get(file)) console.log(`${file} มีในฐานข้อมูลแล้ว`);
     else importOne(db, year, file);

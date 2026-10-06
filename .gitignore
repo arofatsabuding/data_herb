@@ -13,3 +13,5 @@ logs/
 data/*.json
 data/*.lock
 publicfiles/opendata-*/manifest.json
+data/reference-archive/
+publicfiles/*.uploading

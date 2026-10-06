@@ -5,8 +5,9 @@ const NAV = [
   { href: '/', label: 'หน้าหลัก' },
   { href: '/search', label: 'ค้นหายา' },
   { href: '/groups', label: 'Drug Group' },
-  { href: '/stats', label: 'สรุปข้อมูล' },
   { href: '/kpi', label: 'ติดตามตัวชี้วัด' },
+  { href: '/admin', label: 'ผู้ดูแล' },
+  { href: '/stats', label: 'สรุปข้อมูล' },
 ];
 
 export default function Header() {
