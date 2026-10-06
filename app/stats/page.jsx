@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
+import ExcelButton from '@/components/ExcelButton';
 import KpiSummary from '@/components/KpiSummary';
 import { getBreakdown, getStats } from '@/lib/drugs';
 import { PREF_COOKIE, kpiAvailable, parsePrefs, resolveSets } from '@/lib/kpi';
@@ -11,14 +12,17 @@ export const metadata = { title: 'สรุปข้อมูล — Data Herb' 
 const fmt = (n) => Number(n || 0).toLocaleString('th-TH');
 const pct = (a, b) => (b ? ((a / b) * 100).toFixed(1) : '0.0');
 
-function BreakdownTable({ title, rows, param = 'q' }) {
+function BreakdownTable({ id, title, rows, param = 'q' }) {
   return (
     <section className="card overflow-hidden">
-      <h2 className="border-b border-gray-100 px-6 py-4 text-lg font-bold text-gray-800">{title}</h2>
-      <table className="w-full text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-6 py-4">
+        <h2 className="text-lg font-bold text-gray-800">{title}</h2>
+        <ExcelButton tables={[{ id, name: title }]} filename={`stats_${id}`} />
+      </div>
+      <table id={id} className="w-full text-sm">
         <thead className="bg-gradient-to-r from-emerald-50 to-teal-50 text-left text-emerald-900">
           <tr>
-            <th className="px-6 py-2 font-semibold"></th>
+            <th className="px-6 py-2 font-semibold" data-excel={title}></th>
             <th className="px-3 py-2 text-right font-semibold">ทั้งหมด</th>
             <th className="px-6 py-2 font-semibold">มี Drug Group</th>
           </tr>
@@ -73,7 +77,20 @@ export default async function StatsPage() {
 
       {sets.length > 0 && <KpiSummary sets={sets} />}
 
-      <h2 className="mb-4 text-xl font-bold text-gray-800">ข้อมูลรหัสยาแผนไทย 24 หลัก</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xl font-bold text-gray-800">ข้อมูลรหัสยาแผนไทย 24 หลัก</h2>
+        <ExcelButton
+          sheets={[{ name: 'สรุปข้อมูลยา', rows: [['รายการ', 'จำนวน', 'ร้อยละของทั้งหมด'], ...rows.map(([l, v]) => [l, v, l.startsWith('จำนวน') ? '' : Number(pct(v, s.total))])] }]}
+          tables={[
+            { id: 'by_type', name: 'แยกตามประเภทยา' },
+            { id: 'dosage_form', name: 'รูปแบบยา' },
+            { id: 'manufacturer', name: 'ผู้ผลิต' },
+          ]}
+          filename="stats_drugs"
+          sheetsFirst
+          label="ดาวน์โหลด Excel ทั้งหมด"
+        />
+      </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map(([label, value]) => (
@@ -89,13 +106,14 @@ export default async function StatsPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <BreakdownTable
+          id="by_type"
           title="แยกตามประเภทยา"
           param="type"
           rows={s.byType.map((t) => ({ label: t.drug_type, total: t.total, with_group: t.with_group }))}
         />
-        <BreakdownTable title="รูปแบบยา (15 อันดับแรก)" rows={getBreakdown('dosage_form')} />
+        <BreakdownTable id="dosage_form" title="รูปแบบยา (15 อันดับแรก)" rows={getBreakdown('dosage_form')} />
         <div className="lg:col-span-2">
-          <BreakdownTable title="ผู้ผลิต (15 อันดับแรก)" rows={getBreakdown('manufacturer')} />
+          <BreakdownTable id="manufacturer" title="ผู้ผลิต (15 อันดับแรก)" rows={getBreakdown('manufacturer')} />
         </div>
       </div>
     </div>

@@ -1,11 +1,12 @@
 // อัตรารหัสยาที่ผิดพลาด (รหัสที่ส่งมาไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก) — ใช้ในหน้า /kpi และ /stats
 import Link from 'next/link';
+import ExcelButton from '@/components/ExcelButton';
 import { rate } from '@/lib/kpi';
 
 const num = (n) => Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 0 });
 const pct = (v) => (v === null ? '-' : `${v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
 
-// ผลต่างร้อยละ (จุด) — ลดลง = ดีขึ้น (เขียว)
+// ผลต่างของร้อยละ (แสดงเป็น %) — ลดลง = ดีขึ้น (เขียว)
 export function RateDelta({ prev, cur }) {
   if (prev === null || cur === null) return <span className="text-gray-400">-</span>;
   const d = cur - prev;
@@ -15,7 +16,7 @@ export function RateDelta({ prev, cur }) {
   return (
     <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${color}`}>
       {better ? '▼' : worse ? '▲' : '•'} {d > 0 ? '+' : ''}
-      {d.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} จุด
+      {d.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
     </span>
   );
 }
@@ -35,7 +36,7 @@ const MEASURES = [
   { label: 'รายการยา (หน่วยบริการ × รหัสยา)', total: 'rows', bad: 'bad_rows', unit: 'รายการ' },
 ];
 
-export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, childHref, title = 'อัตรารหัสยาที่ผิดพลาด' }) {
+export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, childHref, filename = 'code_errors', title = 'อัตรารหัสยาที่ผิดพลาด' }) {
   const T = (y) => data.totals[y] || {};
   const years = [prevYear, curYear].filter(Boolean);
   const childRate = (c, y) => rate(c.byYear[y]?.bad_rows, c.byYear[y]?.rows);
@@ -45,15 +46,25 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
 
   return (
     <section className="card mt-6 overflow-hidden border border-rose-200">
-      <div className="border-b border-rose-100 bg-gradient-to-r from-rose-50 to-red-50 px-6 py-4">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-rose-900">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-sm text-white">!</span>
-          {title}
-        </h2>
-        <p className="text-xs text-rose-800/80">
-          รหัสยาที่ผิดพลาด = รหัสที่หน่วยบริการส่งมา (หลังล้างอักขระ) ไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก
-          รวมรหัสที่ว่างหรือไม่ครบหลัก · ร้อยละ = ผิดพลาด ÷ ทั้งหมด × 100
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-rose-100 bg-gradient-to-r from-rose-50 to-red-50 px-6 py-4">
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-rose-900">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-sm text-white">!</span>
+            {title}
+          </h2>
+          <p className="text-xs text-rose-800/80">
+            รหัสยาที่ผิดพลาด = รหัสที่หน่วยบริการส่งมา (หลังล้างอักขระ) ไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก
+            รวมรหัสที่ว่างหรือไม่ครบหลัก · ร้อยละ = ผิดพลาด ÷ ทั้งหมด × 100
+          </p>
+        </div>
+        <ExcelButton
+          tone="rose"
+          filename={filename}
+          tables={[
+            { id: 'code-errors-summary', name: 'สรุปอัตรารหัสผิด' },
+            ...(children.length ? [{ id: 'code-errors-children', name: `แยกตาม${childLabel}` }] : []),
+          ]}
+        />
       </div>
 
       <div className="grid gap-4 p-6 sm:grid-cols-2">
@@ -77,7 +88,7 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
       </div>
 
       <div className="overflow-x-auto border-t border-rose-100">
-        <table className="w-full text-sm">
+        <table id="code-errors-summary" className="w-full text-sm">
           <thead className="bg-gradient-to-r from-rose-100 to-red-50 text-left text-rose-900">
             <tr>
               <th className="px-4 py-3 font-semibold">นับตาม</th>
@@ -121,7 +132,7 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
 
       {children.length > 0 && (
         <div className="max-h-[32rem] overflow-auto border-t border-rose-100">
-          <table className="w-full text-sm">
+          <table id="code-errors-children" className="w-full text-sm">
             <thead className="sticky top-0 bg-rose-50 text-left text-rose-900">
               <tr>
                 <th className="px-4 py-3 font-semibold">#</th>

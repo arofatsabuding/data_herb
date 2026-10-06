@@ -38,7 +38,7 @@ export function AdminLoginForm({ onCancel }) {
   );
 }
 
-// เมนู "ผู้ดูแล" ในแถบด้านบน — กดแล้วเด้งหน้าต่างให้กรอกรหัสก่อน
+// เมนู "ผู้ดูแลระบบ" ในแถบด้านบน — กดแล้วเด้งหน้าต่างให้กรอกรหัสก่อน
 // (portal ไปที่ body เพราะ header ใช้ backdrop-blur ทำให้ fixed ไม่เต็มจอ)
 export function AdminNavButton({ className }) {
   const [open, setOpen] = useState(false);
@@ -53,7 +53,11 @@ export function AdminNavButton({ className }) {
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={className}>
-        ผู้ดูแล
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+          <rect x="4" y="11" width="16" height="10" rx="2" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+        ผู้ดูแลระบบ
       </button>
       {open &&
         createPortal(
@@ -62,7 +66,7 @@ export function AdminNavButton({ className }) {
             onClick={(e) => e.target === e.currentTarget && setOpen(false)}
           >
             <div role="dialog" aria-modal="true" className="card w-full max-w-sm p-6 whitespace-normal">
-              <h2 className="mb-1 text-lg font-bold text-gray-800">เข้าสู่หน้าผู้ดูแล</h2>
+              <h2 className="mb-1 text-lg font-bold text-gray-800">เข้าสู่หน้าผู้ดูแลระบบ</h2>
               <p className="mb-4 text-sm text-gray-600">กรุณากรอกรหัสผู้ดูแล</p>
               <AdminLoginForm onCancel={() => setOpen(false)} />
             </div>

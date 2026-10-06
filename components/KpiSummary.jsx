@@ -1,5 +1,6 @@
 // สรุปตัวชี้วัด "มูลค่ายาสมุนไพรในสิทธิ UC" ภาพรวมประเทศ — ใช้ในหน้า /stats
 import Link from 'next/link';
+import ExcelButton from '@/components/ExcelButton';
 import Change from '@/components/KpiChange';
 import { RateDelta } from '@/components/KpiCodeErrors';
 import { EXCLUDED_ZONES, KPI_NAME, NOT_IN_GROUP, getCodeErrors, getCompareReport, rate } from '@/lib/kpi';
@@ -34,6 +35,13 @@ export default function KpiSummary({ sets }) {
   const zones = [...report.children].sort((a, b) => Number(a.key) - Number(b.key));
   const top = [...report.topGroups].sort((a, b) => val(b, curYear) - val(a, curYear)).slice(0, 5);
   const notFoundValue = (y) => (T(y).vs_uc || 0) - (T(y).matched_vs_uc || 0);
+  const years2 = [prevYear, curYear].filter(Boolean);
+  const groupSheet = [
+    ['อันดับ', 'กลุ่มยา 11 หลัก', 'ชื่อกลุ่มยา', ...years2.map((y) => `มูลค่า ${y} (บาท)`)],
+    ...[...report.topGroups]
+      .sort((a, b) => val(b, curYear) - val(a, curYear))
+      .map((d, i) => [i + 1, d.code11, d.full_name, ...years2.map((y) => val(d, y))]),
+  ];
 
   return (
     <section className="mb-10">
@@ -45,9 +53,16 @@ export default function KpiSummary({ sets }) {
             {EXCLUDED_ZONES.join(', ')} และหน่วยบริการที่ไม่พบเขตสุขภาพ
           </p>
         </div>
-        <Link href="/kpi" className="btn-ghost">
-          ดูรายละเอียดตัวชี้วัด →
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <ExcelButton
+            tables={[{ id: 'kpi-summary-zones', name: 'แยกตามเขตสุขภาพ' }]}
+            sheets={[{ name: 'กลุ่มยา', rows: groupSheet }]}
+            filename="kpi_summary_country"
+          />
+          <Link href="/kpi" className="btn-ghost">
+            ดูรายละเอียดตัวชี้วัด →
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -110,7 +125,7 @@ export default function KpiSummary({ sets }) {
         <div className="card overflow-hidden lg:col-span-2">
           <h3 className="border-b border-gray-100 px-6 py-4 text-lg font-bold text-gray-800">แยกตามเขตสุขภาพ</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table id="kpi-summary-zones" className="w-full text-sm">
               <thead className="bg-gradient-to-r from-emerald-50 to-teal-50 text-left text-emerald-900">
                 <tr>
                   <th className="px-4 py-3 font-semibold">เขตสุขภาพ</th>

@@ -1,7 +1,7 @@
 import SearchForm from '@/components/SearchForm';
 import DrugTable from '@/components/DrugTable';
 import Pagination from '@/components/Pagination';
-import { DownloadIcon } from '@/components/Icons';
+import ExcelButton from '@/components/ExcelButton';
 import { listFilterOptions, searchDrugs } from '@/lib/drugs';
 
 export const dynamic = 'force-dynamic';
@@ -55,10 +55,7 @@ export default async function SearchPage({ searchParams }) {
           )}
         </p>
         {result.total > 0 && (
-          <a href={exportHref} className="btn-ghost">
-            <DownloadIcon className="h-4 w-4" />
-            ดาวน์โหลด CSV
-          </a>
+          <ExcelButton href={exportHref} label={`ดาวน์โหลด Excel (${result.total.toLocaleString('th-TH')} รายการ)`} />
         )}
       </div>
 

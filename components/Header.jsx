@@ -13,6 +13,10 @@ const NAV = [
 const NAV_ITEM =
   'rounded-full px-3 py-2 text-gray-300 transition-colors duration-300 hover:bg-white/10 hover:text-white';
 
+// ปุ่มผู้ดูแลระบบ — แยกให้ต่างจากเมนูอื่น (กรอบสีทอง + ไอคอนกุญแจ)
+const ADMIN_ITEM =
+  'ml-1 inline-flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-amber-400/10 px-3 py-1.5 font-semibold text-amber-300 transition-colors duration-300 hover:bg-amber-400 hover:text-navy-950';
+
 export default function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-navy-950/95 backdrop-blur">
@@ -32,7 +36,7 @@ export default function Header() {
               {n.label}
             </Link>
           ))}
-          <AdminNavButton className={NAV_ITEM} />
+          <AdminNavButton className={ADMIN_ITEM} />
         </nav>
       </div>
     </header>

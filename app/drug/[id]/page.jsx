@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { formatRate, GroupBadge, TypeBadge } from '@/components/Badges';
 import DrugTable from '@/components/DrugTable';
+import ExcelButton from '@/components/ExcelButton';
 import { ArrowLeftIcon } from '@/components/Icons';
-import { getDrug, getSiblings } from '@/lib/drugs';
+import { drugExportHeader, drugExportRow, getDrug, getDrugsByCode24, getSiblings } from '@/lib/drugs';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,13 +26,22 @@ export default async function DrugPage({ params }) {
   const drug = getDrug((await params).id);
   if (!drug) notFound();
   const siblings = getSiblings(drug);
+  // Excel: ยานี้ + รายการอื่นที่ใช้รหัส 24 หลักเดียวกัน (ข้อมูลครบทุกคอลัมน์)
+  const sameCode = [drug, ...getDrugsByCode24(drug.code24).filter((d) => d.id !== drug.id)];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <Link href="/search" className="mb-6 inline-flex items-center gap-2 text-sm text-emerald-700 hover:underline">
-        <ArrowLeftIcon className="h-4 w-4" />
-        กลับไปหน้าค้นหา
-      </Link>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <Link href="/search" className="inline-flex items-center gap-2 text-sm text-emerald-700 hover:underline">
+          <ArrowLeftIcon className="h-4 w-4" />
+          กลับไปหน้าค้นหา
+        </Link>
+        <ExcelButton
+          filename={`drug_${drug.code24}`}
+          sheets={[{ name: 'ข้อมูลยา', rows: [drugExportHeader(), ...sameCode.map(drugExportRow)] }]}
+          label={sameCode.length > 1 ? `ดาวน์โหลด Excel (${sameCode.length} รายการ)` : 'ดาวน์โหลด Excel'}
+        />
+      </div>
 
       {/* หัวเรื่อง + รหัสสำคัญ */}
       <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 p-6 text-white shadow-lg md:p-8">

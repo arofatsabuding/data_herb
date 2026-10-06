@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import Change from '@/components/KpiChange';
+import ExcelButton from '@/components/ExcelButton';
 import KpiCodeErrors from '@/components/KpiCodeErrors';
 import KpiDataBar from '@/components/KpiDataBar';
 import KpiFilter from '@/components/KpiFilter';
@@ -38,6 +39,9 @@ function formatDateCom(s) {
   const d = new Date(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T00:00:00`);
   return d.toLocaleDateString('th-TH', { dateStyle: 'long' });
 }
+
+// ชื่อไฟล์ Excel ตามพื้นที่ที่เลือก เช่น kpi_province_50
+const kpiFile = (q, part) => `kpi_${q.view}_${q.hosp || q.district || q.province || q.zone || 'all'}_${part}`;
 
 function kpiHref(params) {
   const sp = new URLSearchParams();
@@ -279,11 +283,11 @@ export default async function KpiPage({ searchParams }) {
             </div>
 
             {q.view === 'hosp' ? (
-              <HospDrugs drugs={report.children.filter((d) => d.in24)} prevYear={prevYear} curYear={curYear} />
+              <HospDrugs drugs={report.children.filter((d) => d.in24)} q={q} prevYear={prevYear} curYear={curYear} />
             ) : (
               <div className="grid gap-6 lg:grid-cols-3">
                 <ChildrenTable report={report} q={q} prevYear={prevYear} curYear={curYear} />
-                <TopGroups items={report.topGroups} prevYear={prevYear} curYear={curYear} />
+                <TopGroups items={report.topGroups} q={q} prevYear={prevYear} curYear={curYear} />
               </div>
             )}
 
@@ -293,6 +297,7 @@ export default async function KpiPage({ searchParams }) {
               curYear={curYear}
               childLabel={VIEWS[q.view].childLabel}
               childHref={(key) => childHref(q, VIEWS[q.view].child, key)}
+              filename={kpiFile(q, 'code_errors')}
             />
 
             <NotFound24 items={report.notFound24} q={q} prevYear={prevYear} curYear={curYear} />
@@ -363,11 +368,14 @@ function ChildrenTable({ report, q, prevYear, curYear }) {
   const total = (y) => report.totals[y] || {};
   return (
     <section className="card overflow-hidden lg:col-span-2">
-      <h2 className="border-b border-gray-100 px-6 py-4 text-lg font-bold text-gray-800">
-        แยกตาม{V.childLabel} ({rows.length})
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-6 py-4">
+        <h2 className="text-lg font-bold text-gray-800">
+          แยกตาม{V.childLabel} ({rows.length})
+        </h2>
+        <ExcelButton tables={[{ id: 'kpi-children', name: `แยกตาม${V.childLabel}` }]} filename={kpiFile(q, 'children')} />
+      </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table id="kpi-children" className="w-full text-sm">
           <thead className="bg-gradient-to-r from-emerald-50 to-teal-50 text-left text-emerald-900">
             <tr>
               <th className="px-4 py-3 font-semibold">#</th>
@@ -467,13 +475,29 @@ function DrugTotalRow({ label, sums, prevYear, curYear, before, showChange = tru
   );
 }
 
-function TopGroups({ items, prevYear, curYear }) {
+function TopGroups({ items, q, prevYear, curYear }) {
   const val = (d, y) => d.byYear[y]?.kpi_value || 0;
-  const top = [...items].sort((a, b) => val(b, curYear) - val(a, curYear)).slice(0, 10);
+  const sorted = [...items].sort((a, b) => val(b, curYear) - val(a, curYear));
+  const top = sorted.slice(0, 10);
   const max = Math.max(...top.map((d) => val(d, curYear)), 0);
+  const years = [prevYear, curYear].filter(Boolean);
+  // Excel ใส่ทุกกลุ่มยา (บนหน้าแสดง 10 อันดับ)
+  const sheet = [
+    ['อันดับ', 'กลุ่มยา 11 หลัก', 'ชื่อกลุ่มยา', 'ราคา/course', ...years.flatMap((y) => [`ครั้ง UC ${y}`, `มูลค่า ${y} (บาท)`])],
+    ...sorted.map((d, i) => [
+      i + 1,
+      d.code11,
+      d.full_name,
+      d.price,
+      ...years.flatMap((y) => [d.byYear[y]?.vs_uc || 0, d.byYear[y]?.kpi_value || 0]),
+    ]),
+  ];
   return (
     <section className="card p-6">
-      <h2 className="mb-4 text-lg font-bold text-gray-800">10 กลุ่มยามูลค่าสูงสุด ปี {curYear}</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-bold text-gray-800">10 กลุ่มยามูลค่าสูงสุด ปี {curYear}</h2>
+        <ExcelButton sheets={[{ name: 'กลุ่มยา', rows: sheet }]} filename={kpiFile(q, 'drug_groups')} label="Excel ทุกกลุ่ม" />
+      </div>
       <ol className="space-y-4">
         {top.map((d, i) => (
           <li key={d.code11}>
@@ -513,7 +537,7 @@ function Code24({ d }) {
   );
 }
 
-function HospDrugs({ drugs, prevYear, curYear }) {
+function HospDrugs({ drugs, q, prevYear, curYear }) {
   const get = (d, y, f) => d.byYear[y]?.[f] || 0;
   const rows = [...drugs].sort(
     (a, b) =>
@@ -523,11 +547,12 @@ function HospDrugs({ drugs, prevYear, curYear }) {
   );
   return (
     <section className="card overflow-hidden">
-      <h2 className="border-b border-gray-100 px-6 py-4 text-lg font-bold text-gray-800">
-        รายการยาที่จ่าย ({rows.length} รหัส 24 หลัก)
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-6 py-4">
+        <h2 className="text-lg font-bold text-gray-800">รายการยาที่จ่าย ({rows.length} รหัส 24 หลัก)</h2>
+        <ExcelButton tables={[{ id: 'kpi-hosp-drugs', name: 'รายการยาที่จ่าย' }]} filename={kpiFile(q, 'drugs')} />
+      </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table id="kpi-hosp-drugs" className="w-full text-sm">
           <thead className="bg-gradient-to-r from-emerald-50 to-teal-50 text-left text-emerald-900">
             <tr>
               <th className="px-4 py-3 font-semibold">รหัส 24 หลัก</th>
@@ -589,7 +614,7 @@ function NotFound24({ items, q, prevYear, curYear }) {
   const total = items.total ?? items.length;
   const isHosp = q.view === 'hosp';
   const get = (d, y, f) => d.byYear[y]?.[f] || 0;
-  const csv = `/api/kpi/not-found-24?${new URLSearchParams(Object.entries(q).filter(([, v]) => v))}`;
+  const xlsx = `/api/kpi/not-found-24?${new URLSearchParams(Object.entries(q).filter(([, v]) => v))}`;
   return (
     <section className="card mt-6 overflow-hidden border border-amber-200">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-100 bg-amber-50/60 px-6 py-4">
@@ -601,9 +626,7 @@ function NotFound24({ items, q, prevYear, curYear }) {
           </p>
         </div>
         {total > 0 && (
-          <a href={csv} className="rounded-xl border border-amber-300 bg-white px-3 py-1.5 text-sm text-amber-800 hover:bg-amber-100">
-            ดาวน์โหลด CSV ทั้งหมด
-          </a>
+          <ExcelButton href={xlsx} tone="amber" label="ดาวน์โหลด Excel ทั้งหมด" />
         )}
       </div>
       {total === 0 ? (

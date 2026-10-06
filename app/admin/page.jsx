@@ -9,7 +9,7 @@ import { uploadReference } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'ผู้ดูแล — Data Herb' };
+export const metadata = { title: 'ผู้ดูแลระบบ — Data Herb' };
 
 const when = (t) =>
   new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }) + ' น.';
@@ -20,7 +20,7 @@ export default async function AdminPage() {
     return (
       <div className="mx-auto max-w-sm px-4 py-16">
         <div className="card p-6">
-          <h1 className="mb-1 text-lg font-bold text-gray-800">เข้าสู่หน้าผู้ดูแล</h1>
+          <h1 className="mb-1 text-lg font-bold text-gray-800">เข้าสู่หน้าผู้ดูแลระบบ</h1>
           <p className="mb-4 text-sm text-gray-600">กรุณากรอกรหัสผู้ดูแล</p>
           <AdminLoginForm />
         </div>
@@ -32,7 +32,7 @@ export default async function AdminPage() {
   const files = refs.listReferences().map((f) => ({ ...f, href: f.file ? downloadHref('pub', f.file) : null }));
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="mb-1 text-2xl font-bold text-gray-800">ผู้ดูแล — ไฟล์ข้อมูลอ้างอิง</h1>
+      <h1 className="mb-1 text-2xl font-bold text-gray-800">ผู้ดูแลระบบ — ไฟล์ข้อมูลอ้างอิง</h1>
       <p className="mb-6 text-sm text-gray-600">
         อัปโหลดไฟล์ฉบับล่าสุดแทนไฟล์เดิม ระบบจะตรวจรูปแบบไฟล์ก่อน (ชื่อ sheet / หัวคอลัมน์) ถ้าไม่ถูกต้องจะยังใช้ไฟล์เดิม
         — ไฟล์ที่อัปโหลดจะถูกตั้งชื่อใหม่ตามชื่อมาตรฐานเสมอ ไม่ว่าชื่อเดิมจะเป็นอะไร
