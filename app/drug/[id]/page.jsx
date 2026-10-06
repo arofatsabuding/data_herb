@@ -73,6 +73,7 @@ export default async function DrugPage({ params }) {
             <Field label="ผู้ผลิต" value={drug.manufacturer && `${drug.manufacturer} (${drug.manufacturer_code})`} />
             <Field label="เลขทะเบียนยา" value={drug.registration_no} />
             <Field label="รหัสทำงาน" value={drug.work_code} mono />
+            <Field label="รหัสที่มาของยา" value={drug.source_code} mono />
             <Field label="สรรพคุณ / ข้อบ่งใช้" value={drug.indication} />
             <Field label="สรรพคุณตามทฤษฎีแพทย์แผนไทย" value={drug.thai_theory_code} mono />
             <Field label="ครั้งที่กำหนด" value={drug.assigned_round} />

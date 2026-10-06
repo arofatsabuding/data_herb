@@ -98,7 +98,16 @@ export default function AdminFiles({ files, busy, action }) {
               <div>
                 <dt className="text-xs text-gray-500">ไฟล์ที่ใช้อยู่</dt>
                 <dd className="mono break-all text-gray-800">
-                  {f.file ? `publicfiles/${f.file}` : <span className="text-rose-600">ไม่พบไฟล์ ({f.expected})</span>}
+                  {f.file ? (
+                    <>
+                      publicfiles/{f.file}{' '}
+                      <a href={f.href} className="font-sans text-xs text-emerald-700 hover:underline">
+                        ดาวน์โหลด
+                      </a>
+                    </>
+                  ) : (
+                    <span className="text-rose-600">ไม่พบไฟล์ ({f.expected})</span>
+                  )}
                 </dd>
               </div>
               <div>

@@ -33,8 +33,6 @@ function RateBar({ value }) {
 
 const MEASURES = [
   { label: 'รายการยา (หน่วยบริการ × รหัสยา)', total: 'rows', bad: 'bad_rows', unit: 'รายการ' },
-  { label: 'รหัสยา (ไม่นับซ้ำ)', total: 'codes', bad: 'bad_codes', unit: 'รหัส' },
-  { label: 'ครั้งที่จ่ายยา UC', total: 'vs_uc', bad: 'bad_vs_uc', unit: 'ครั้ง' },
 ];
 
 export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, childHref, title = 'อัตรารหัสยาที่ผิดพลาด' }) {

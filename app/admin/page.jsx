@@ -1,5 +1,7 @@
 import AdminFiles from '@/components/AdminFiles';
 import { AdminLoginForm } from '@/components/AdminLogin';
+import SystemFiles from '@/components/SystemFiles';
+import { downloadHref, listSystemFiles } from '@/lib/system-files';
 import { isAdmin } from '@/lib/admin-auth';
 import { referenceStatus } from '@/lib/scheduler';
 import refs from '@/scripts/reference-files';
@@ -27,6 +29,7 @@ export default async function AdminPage() {
   }
 
   const status = referenceStatus();
+  const files = refs.listReferences().map((f) => ({ ...f, href: f.file ? downloadHref('pub', f.file) : null }));
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-bold text-gray-800">ผู้ดูแล — ไฟล์ข้อมูลอ้างอิง</h1>
@@ -55,7 +58,8 @@ export default async function AdminPage() {
         )
       )}
 
-      <AdminFiles files={refs.listReferences()} busy={status.busy} action={uploadReference} />
+      <AdminFiles files={files} busy={status.busy} action={uploadReference} />
+      <SystemFiles groups={listSystemFiles()} />
     </div>
   );
 }
