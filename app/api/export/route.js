@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 
 const COLUMNS = [
   ['code24', 'รหัสยาแผนไทย 24 หลัก'],
+  ['source_code', 'รหัสที่มาของยา'],
   ['ttmtid', 'TTMTID'],
   ['drug_group', 'Drug Group'],
   ['reimburse_amount', 'เบิกได้ต่อ course'],

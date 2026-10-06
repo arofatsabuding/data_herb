@@ -16,6 +16,7 @@ export default function DrugTable({ rows }) {
               <th className="px-4 py-3 font-semibold">ชื่อยา</th>
               <th className="px-4 py-3 font-semibold">ประเภท</th>
               <th className="px-4 py-3 font-semibold">รหัส 24 หลัก</th>
+              <th className="px-4 py-3 font-semibold">รหัสที่มาของยา</th>
               <th className="px-4 py-3 font-semibold">TTMTID</th>
               <th className="px-4 py-3 font-semibold">Drug Group</th>
               <th className="px-4 py-3 font-semibold">เบิกได้ / course</th>
@@ -39,6 +40,7 @@ export default function DrugTable({ rows }) {
                   <TypeBadge type={d.drug_type} />
                 </td>
                 <td className="mono px-4 py-3 text-gray-700">{d.code24}</td>
+                <td className="mono px-4 py-3 text-gray-700">{d.source_code || '-'}</td>
                 <td className="mono px-4 py-3 text-gray-700">{d.ttmtid}</td>
                 <td className="px-4 py-3">
                   <GroupBadge drug={d} />
@@ -68,6 +70,8 @@ export default function DrugTable({ rows }) {
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
                 <span className="text-gray-500">24 หลัก</span>
                 <span className="mono break-all">{d.code24}</span>
+                <span className="text-gray-500">รหัสที่มา</span>
+                <span className="mono break-all">{d.source_code || '-'}</span>
                 <span className="text-gray-500">TTMTID</span>
                 <span className="mono">{d.ttmtid}</span>
                 <span className="text-gray-500">Drug Group</span>
