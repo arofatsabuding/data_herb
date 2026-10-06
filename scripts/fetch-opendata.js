@@ -1,5 +1,5 @@
 // ดึงข้อมูล s_ttm4 จาก opendata.moph.go.th ทุกจังหวัด แล้วบันทึกเป็น Excel รายวันใน publicfiles/opendata-2570/
-// ชื่อไฟล์: Data_<ปีที่บันทึก>_sttm4_<จำนวนแถว>_<dd-mm-yy พ.ศ.>.xlsx  (รูปแบบเดียวกับ Data_2569_sttm4_195692_08-09-69.xlsx)
+// ชื่อไฟล์: Data_<ปีที่บันทึก>_sttm4_<จำนวนแถว>_<dd-mm-yy พ.ศ.>_<HH.MM>.xlsx  เช่น Data_2570_sttm4_199553_06-10-69_22.05.xlsx
 // จากนั้นนำเข้า data/kpi.db เป็น dataset ใหม่
 //
 // ใช้งาน: npm run fetch:opendata
@@ -175,14 +175,24 @@ function thaiDateStamp(date = new Date()) {
   return `${parts.day}-${parts.month}-${String(be).padStart(2, '0')}`;
 }
 
+// เวลาแบบ HH.MM ตามเวลาไทย เช่น 22.05
+function thaiTimeStamp(date = new Date()) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(date)
+      .map((x) => [x.type, x.value])
+  );
+  return `${p.hour}.${p.minute}`;
+}
+
 function writeExcel(rows) {
   fs.mkdirSync(kpi.yearDir(SAVE_YEAR), { recursive: true });
-  const stamp = thaiDateStamp();
-  // ลบไฟล์ของวันเดียวกันที่ดึงไว้ก่อนหน้า (ถ้ารันซ้ำในวันเดียวกัน)
-  for (const f of fs.readdirSync(kpi.yearDir(SAVE_YEAR))) {
-    if (new RegExp(`^Data_${SAVE_YEAR}_sttm4_\\d+_${stamp}\\.xlsx$`).test(f)) fs.unlinkSync(path.join(kpi.yearDir(SAVE_YEAR), f));
-  }
-  const file = path.join(kpi.yearDir(SAVE_YEAR), `Data_${SAVE_YEAR}_sttm4_${rows.length}_${stamp}.xlsx`);
+  // ใส่เวลาในชื่อไฟล์ — วันเดียวกันดึงหลายครั้งได้โดยไม่ทับกัน
+  const now = new Date();
+  const file = path.join(
+    kpi.yearDir(SAVE_YEAR),
+    `Data_${SAVE_YEAR}_sttm4_${rows.length}_${thaiDateStamp(now)}_${thaiTimeStamp(now)}.xlsx`
+  );
   const sheet = XLSX.utils.json_to_sheet(
     rows.map((r) => Object.fromEntries(kpi.DATA_COLUMNS.map((c) => [c, r[c] ?? null]))),
     { header: kpi.DATA_COLUMNS }
@@ -215,6 +225,13 @@ async function chooseFetchYear() {
 
 async function main() {
   const started = Date.now();
+  // ให้ดึงได้ครั้งละ 1 งาน — มีคนดึงอยู่แล้ว ออกด้วย exit 2
+  if (!kpi.acquireFetchLock(process.env.FETCH_BY || 'command line')) {
+    const info = kpi.fetchLockInfo();
+    log(`มีการดึงข้อมูลอยู่แล้ว (${info?.by || '-'} เริ่ม ${info?.startedAt || '-'}) — ยกเลิกครั้งนี้`);
+    process.exit(2);
+  }
+  process.on('exit', kpi.releaseFetchLock);
   FETCH_YEAR = await chooseFetchYear();
   if (!FETCH_YEAR) {
     log(`API ยังไม่มีข้อมูลปี ${SAVE_YEAR} — ไม่ดึงข้อมูล (OPENDATA_FALLBACK_YEAR=none)`);

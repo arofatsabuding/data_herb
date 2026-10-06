@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
+import KpiDataBar from '@/components/KpiDataBar';
 import KpiFilter from '@/components/KpiFilter';
 import {
   DEFAULT_HOSPCODE,
@@ -10,6 +11,7 @@ import {
   VIEWS,
   getAreaOptions,
   getCompareReport,
+  getDatasets,
   getOfficeTypes,
   kpiAvailable,
   parseKpiQuery,
@@ -18,7 +20,9 @@ import {
   resolveSets,
   sumByYear,
 } from '@/lib/kpi';
-import { ensureImported } from '@/lib/scheduler';
+import { MAX_RETRIES, cronEnabled, ensureImported, fetchInProgress } from '@/lib/scheduler';
+import kpiLib from '@/scripts/kpi-lib';
+import { checkFetch, fetchNow, selectFile } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,6 +83,41 @@ function StatCard({ label, value, unit, note, accent, children }) {
       {note && <div className="mt-1 text-xs text-gray-500">{note}</div>}
     </div>
   );
+}
+
+// ตัวเลือกไฟล์ของแต่ละปี สำหรับ dropdown
+function fileLabel(f, year, imported) {
+  const parts = [`${f.stamp.replace(/-/g, '/')}${f.time ? ` ${f.time} น.` : ''}`, `${num(f.rows)} แถว`];
+  if (f.fetchYear && f.fetchYear !== year) parts.push(`ข้อมูลปี ${f.fetchYear} แทน`);
+  if (!imported.has(f.name)) parts.push('ต้องเตรียม ~1 นาที');
+  return parts.join(' · ');
+}
+
+function dataOptions(sets, prefs) {
+  const imported = new Set(getDatasets().map((d) => d.file));
+  return sets.map(({ year }) => {
+    const files = kpiLib.listFiles(year);
+    const choice = prefs[year] && files.some((f) => f.name === prefs[year]) ? prefs[year] : 'latest';
+    return {
+      year,
+      choice,
+      latestLabel: files[0] ? fileLabel(files[0], year, imported) : null,
+      files: files.map((f) => ({ name: f.name, label: fileLabel(f, year, imported) })),
+    };
+  });
+}
+
+// สถานะการดึงอัตโนมัติรอบล่าสุด
+const ROUND_STATUS = { ok: 'สำเร็จ', running: 'กำลังดึง', failed: 'ไม่สำเร็จ — รอดึงใหม่', no_report: 'ไม่มีรายงาน' };
+function roundText() {
+  if (!cronEnabled()) return 'ดึงข้อมูลอัตโนมัติ: ปิด (OPENDATA_CRON=off)';
+  const [date, r] = Object.entries(kpiLib.readFetchStatus().rounds).sort(([a], [b]) => b.localeCompare(a))[0] || [];
+  const last = date
+    ? ` · รอบล่าสุด ${new Date(`${date}T12:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'medium' })}: ${
+        ROUND_STATUS[r.status] || r.status
+      } (ดึง ${r.attempts}/${MAX_RETRIES + 1} ครั้ง)`
+    : '';
+  return `ดึงข้อมูลอัตโนมัติทุกวัน 22:00 น. ไม่สำเร็จจะดึงใหม่อีก ${MAX_RETRIES} ครั้ง${last}`;
 }
 
 function EmptyState() {
@@ -168,23 +207,18 @@ export default async function KpiPage({ searchParams }) {
       </section>
 
       <div className="mx-auto max-w-7xl px-4 py-8">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-          <div className="flex flex-wrap gap-2 text-gray-600">
-            {sets.map((s) => (
-              <span key={s.year} className="rounded-xl bg-white px-3 py-1 shadow-sm">
-                ปี {s.year}: <span className="mono text-xs">{s.file}</span>
-                {s.choice === 'latest' && <span className="ml-1 text-xs text-emerald-600">(ล่าสุด)</span>}
-              </span>
-            ))}
-          </div>
-          <Link href="/kpi/settings" className="text-emerald-700 hover:underline">
-            ⚙ เลือกไฟล์ข้อมูลที่ใช้เปรียบเทียบ
-          </Link>
-        </div>
+        <KpiDataBar
+          years={dataOptions(sets, prefs)}
+          fetching={fetchInProgress()}
+          roundText={roundText()}
+          selectAction={selectFile}
+          checkAction={checkFetch}
+          fetchAction={fetchNow}
+        />
         {sets.some((s) => s.pending) && (
-          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-800">
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-800">
             กำลังเตรียมไฟล์ที่เลือก ({sets.filter((s) => s.pending).map((s) => s.pending).join(', ')}) ประมาณ 1 นาที —
-            ระหว่างนี้แสดงผลจากไฟล์ที่แสดงด้านบนไปก่อน รีเฟรชหน้านี้ภายหลัง
+            ระหว่างนี้แสดงผลจาก {sets.filter((s) => s.pending).map((s) => s.file).join(', ')} ไปก่อน รีเฟรชหน้านี้ภายหลัง
           </div>
         )}
         <div className="mb-8">
@@ -418,7 +452,7 @@ function ChildrenTable({ report, q, prevYear, curYear }) {
 }
 
 // แถวรวมท้ายตารางยา (รวมเฉพาะแถวในตารางนั้น)
-function DrugTotalRow({ label, sums, prevYear, curYear, before, showChange = true, sticky = false }) {
+function DrugTotalRow({ label, sums, prevYear, curYear, before, showChange = true, showValue = true, sticky = false }) {
   const g = (y, f) => sums[y]?.[f] || 0;
   return (
     <tfoot className={`border-t-2 border-emerald-200 bg-emerald-50 font-bold text-gray-800 ${sticky ? 'sticky bottom-0' : ''}`}>
@@ -428,8 +462,8 @@ function DrugTotalRow({ label, sums, prevYear, curYear, before, showChange = tru
         </td>
         {prevYear && <td className="px-4 py-3 text-right">{num(g(prevYear, 'vs_uc'))}</td>}
         <td className="px-4 py-3 text-right">{num(g(curYear, 'vs_uc'))}</td>
-        {prevYear && <td className="whitespace-nowrap px-4 py-3 text-right">{num(g(prevYear, 'kpi_value'))}</td>}
-        <td className="whitespace-nowrap px-4 py-3 text-right text-emerald-700">{num(g(curYear, 'kpi_value'))}</td>
+        {showValue && prevYear && <td className="whitespace-nowrap px-4 py-3 text-right">{num(g(prevYear, 'kpi_value'))}</td>}
+        {showValue && <td className="whitespace-nowrap px-4 py-3 text-right text-emerald-700">{num(g(curYear, 'kpi_value'))}</td>}
         {prevYear && showChange && (
           <td className="px-4 py-3 text-right">
             <Change prev={g(prevYear, 'kpi_value')} cur={g(curYear, 'kpi_value')} />
@@ -454,14 +488,14 @@ function TopGroups({ items, prevYear, curYear }) {
               <span className="font-semibold text-gray-800">
                 {i + 1}. {d.full_name}
               </span>
-              <span className="whitespace-nowrap text-emerald-700">{million(val(d, curYear))} ล้าน</span>
+              <span className="whitespace-nowrap text-emerald-700">{num(val(d, curYear))} บาท</span>
             </div>
             <ShareBar value={val(d, curYear)} max={max} />
             <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
               <span className="mono">{d.code11}</span>
               {prevYear && (
                 <>
-                  <span>· ปี {prevYear}: {million(val(d, prevYear))} ล้าน</span>
+                  <span>· ปี {prevYear}: {num(val(d, prevYear))} บาท</span>
                   <Change prev={val(d, prevYear)} cur={val(d, curYear)} />
                 </>
               )}
@@ -592,8 +626,6 @@ function NotFound24({ items, q, prevYear, curYear }) {
                 {!isHosp && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">หน่วยบริการ</th>}
                 {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC {prevYear}</th>}
                 <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC {curYear}</th>
-                {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">มูลค่า {prevYear}</th>}
-                <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">มูลค่า {curYear}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -614,8 +646,6 @@ function NotFound24({ items, q, prevYear, curYear }) {
                   )}
                   {prevYear && <td className="px-4 py-2 text-right">{num(get(d, prevYear, 'vs_uc'))}</td>}
                   <td className="px-4 py-2 text-right">{num(get(d, curYear, 'vs_uc'))}</td>
-                  {prevYear && <td className="whitespace-nowrap px-4 py-2 text-right">{num(get(d, prevYear, 'kpi_value'))}</td>}
-                  <td className="whitespace-nowrap px-4 py-2 text-right font-semibold">{num(get(d, curYear, 'kpi_value'))}</td>
                 </tr>
               ))}
             </tbody>
@@ -626,6 +656,7 @@ function NotFound24({ items, q, prevYear, curYear }) {
               curYear={curYear}
               before={isHosp ? 3 : 4}
               showChange={false}
+              showValue={false}
               sticky
             />
           </table>

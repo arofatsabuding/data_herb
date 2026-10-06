@@ -96,7 +96,9 @@ function writeJsonAtomic(file, data) {
 // ---------- ไฟล์ข้อมูลในโฟลเดอร์ opendata-<ปี> ----------
 
 const yearDir = (year) => path.join(SRC_DIR, `opendata-${year}`);
-const fileRe = (year) => new RegExp(`^Data_${year}_sttm4_(\\d+)_(\\d{2})-(\\d{2})-(\\d{2})\\.xlsx$`, 'i');
+// Data_<ปี>_sttm4_<แถว>_<dd-mm-yy>[_<HH.MM>].xlsx  (ไฟล์รุ่นแรกไม่มีเวลา)
+const fileRe = (year) =>
+  new RegExp(`^Data_${year}_sttm4_(\\d+)_(\\d{2})-(\\d{2})-(\\d{2})(?:_(\\d{2})\\.(\\d{2}))?\\.xlsx$`, 'i');
 
 // ปีที่มีโฟลเดอร์ opendata-<ปี> เรียงจากน้อยไปมาก
 function listYears() {
@@ -126,7 +128,8 @@ function listFiles(year) {
         year,
         rows: Number(m[1]),
         stamp: `${m[2]}-${m[3]}-${m[4]}`,
-        sortKey: `${m[4]}${m[3]}${m[2]}`,
+        time: m[5] ? `${m[5]}:${m[6]}` : null,
+        sortKey: `${m[4]}${m[3]}${m[2]}${m[5] || '00'}${m[6] || '00'}`,
         size: st.size,
         mtime: st.mtimeMs,
         fetchYear: manifest[name]?.fetchYear ?? null,
@@ -343,6 +346,50 @@ function pruneDatasets(db, log = console.log) {
   }
 }
 
+// ---------- ล็อกการดึงข้อมูล (data/fetch.lock) ----------
+// ให้ดึงได้ครั้งละ 1 งานเท่านั้น ไม่ว่าจะสั่งจากหน้าเว็บ ตั้งเวลา หรือ npm run fetch:opendata
+
+const FETCH_LOCK_PATH = path.join(ROOT, 'data', 'fetch.lock');
+
+function pidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return err.code === 'EPERM';
+  }
+}
+
+// ข้อมูลผู้ถือล็อก หรือ null ถ้าไม่มีใครกำลังดึง (ล็อกค้างจาก process ที่ตายแล้วถือว่าว่าง)
+function fetchLockInfo() {
+  const info = readJson(FETCH_LOCK_PATH, null);
+  if (!info) return null;
+  return pidAlive(info.pid) ? info : null;
+}
+
+// คืนค่า true เมื่อได้ล็อก
+function acquireFetchLock(by) {
+  fs.mkdirSync(path.dirname(FETCH_LOCK_PATH), { recursive: true });
+  for (let i = 0; i < 2; i++) {
+    try {
+      const fd = fs.openSync(FETCH_LOCK_PATH, 'wx'); // สร้างไฟล์แบบ atomic — มีอยู่แล้วจะ error
+      fs.writeSync(fd, JSON.stringify({ pid: process.pid, by, startedAt: new Date().toISOString() }));
+      fs.closeSync(fd);
+      return true;
+    } catch (err) {
+      if (err.code !== 'EEXIST') throw err;
+      if (fetchLockInfo()) return false;
+      fs.rmSync(FETCH_LOCK_PATH, { force: true }); // ล็อกค้าง → ลบแล้วลองใหม่
+    }
+  }
+  return false;
+}
+
+function releaseFetchLock() {
+  const info = readJson(FETCH_LOCK_PATH, null);
+  if (info?.pid === process.pid) fs.rmSync(FETCH_LOCK_PATH, { force: true });
+}
+
 // ---------- สถานะการดึงข้อมูลรายวัน (data/fetch-status.json) ----------
 // { rounds: { "2026-10-06": { attempts, status: running|ok|failed|no_report, updatedAt, file } } }
 
@@ -365,5 +412,5 @@ module.exports = {
   ROOT, SRC_DIR, KPI_DB_PATH, DATA_COLUMNS, FETCH_YEAR_TARGET,
   yearDir, listYears, listFiles, filePath, recordManifest,
   openKpiDb, importReferences, ensureReferences, importDatasetRows, importDatasetFile, pruneDatasets,
-  readFetchStatus, updateFetchRound,
+  readFetchStatus, updateFetchRound, fetchLockInfo, acquireFetchLock, releaseFetchLock,
 };

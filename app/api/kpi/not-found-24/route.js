@@ -24,7 +24,7 @@ export async function GET(request) {
   const years = sets.map((s) => s.year);
   const items = getNotFound24(q, sets, null);
   const header = ['รหัส 24 หลัก (หลังล้าง)', 'รหัสที่ส่งมา (didstd)', 'กลุ่มยา 11 หลัก', 'ชื่อกลุ่มยา', 'ราคา/course'];
-  for (const y of years) header.push(`หน่วยบริการ ${y}`, `ครั้ง UC ${y}`, `มูลค่า ${y}`);
+  for (const y of years) header.push(`หน่วยบริการ ${y}`, `ครั้ง UC ${y}`);
 
   const BOM = String.fromCharCode(0xfeff); // ให้ Excel อ่านภาษาไทยถูก
   const lines = [BOM + header.join(',')];
@@ -32,14 +32,14 @@ export async function GET(request) {
     const row = [d.code24, d.didstd || d.code24, d.code11, d.price === null ? NOT_IN_GROUP : d.full_name, d.price];
     for (const y of years) {
       const v = d.byYear[y] || {};
-      row.push(v.hosp_count ?? 0, v.vs_uc ?? 0, v.kpi_value ?? 0);
+      row.push(v.hosp_count ?? 0, v.vs_uc ?? 0);
     }
     lines.push(row.map(cell).join(','));
   }
   // แถวรวม
   const sum = (y, f) => items.reduce((t, d) => t + Number(d.byYear[y]?.[f] || 0), 0);
   const totalRow = [`รวมทั้งหมด (${items.length} รหัส)`, '', '', '', ''];
-  for (const y of years) totalRow.push('', sum(y, 'vs_uc'), sum(y, 'kpi_value'));
+  for (const y of years) totalRow.push('', sum(y, 'vs_uc'));
   lines.push(totalRow.map(cell).join(','));
 
   const area = String(q[q.view] || 'all').replace(/[^\w-]/g, '');
