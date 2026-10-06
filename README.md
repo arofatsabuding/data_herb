@@ -1,145 +1,179 @@
-# Data Herb — ค้นหารหัสยาสมุนไพร
+# Data Herb — ฐานข้อมูลรหัสยาสมุนไพร
 
-รวมรหัสยาแผนไทย 24 หลัก (กรมการแพทย์แผนไทยและการแพทย์ทางเลือก) กับ TTMT Master (สมสท.)
-เพื่อดูว่ายาแต่ละรายการมีรหัส 24 หลัก, TTMTID และอยู่ใน Drug Group ใด
+เว็บรวม **รหัสยาแผนไทย 24 หลัก** (กรมการแพทย์แผนไทยและการแพทย์ทางเลือก) กับ **TTMT Master** (สมสท.)
+เพื่อดูว่ายาแต่ละรายการมี TTMTID อะไร อยู่ใน Drug Group ใด เบิกได้เท่าไหร่ต่อ course
+พร้อมติดตามตัวชี้วัด **มูลค่ายาสมุนไพรในสิทธิ UC** รายหน่วยบริการถึงระดับประเทศ และเปิดให้ AI ดึงข้อมูลได้
 
-แผนงานทั้งหมดอยู่ที่ [PLAN.md](PLAN.md)
+- เว็บจริง: **https://drug.thaipadi.com**
+- เอกสารในโปรเจกต์:
+  - **README.md** (ไฟล์นี้) — ภาพรวม, ติดตั้ง, การใช้งาน, การตั้งค่า
+  - **[CLAUDE.md](CLAUDE.md)** — กติกาโค้ด แผนที่โค้ด และขั้นตอนทำงานร่วมกัน (Claude Code อ่านอัตโนมัติ — คนในทีมควรอ่านด้วย)
+  - **[PLAN.md](PLAN.md)** — แผนงาน สถานะ และการตัดสินใจของทีม
 
-## เริ่มต้นใช้งาน
+## เมนูในเว็บ
 
-ต้องมี Node.js 18.18 ขึ้นไป
+| เมนู | URL | ทำอะไร |
+|---|---|---|
+| หน้าหลัก | `/` | ช่องค้นหา + ตัวเลขสรุป |
+| ข้อมูลยา | `/search`, `/drug/[id]` | ค้นหา/กรอง (ประเภท, Drug Group, หน่วยเบิก, ชื่อยา, ผู้ผลิต, รหัสที่มาของยา) + รายละเอียดยา |
+| Drug Group | `/groups` | รายการ Drug Group พร้อมอัตราเบิก |
+| ตัวชี้วัด | `/kpi` | มูลค่ายาสมุนไพรในสิทธิ UC เทียบ 2 ปี + อัตรารหัสยาที่ผิดพลาด + รหัส 24 หลักที่ไม่พบ |
+| สรุป | `/stats` | สรุปตัวชี้วัดระดับประเทศ + สถิติฐานข้อมูลยา |
+| ผู้ดูแลระบบ | `/admin` | อัปโหลดไฟล์อ้างอิง / ดาวน์โหลดไฟล์ระบบ (ต้องใส่รหัส) |
+| (footer) API / MCP | `/api-docs` | วิธีให้ AI หรือระบบอื่นดึงข้อมูล |
+
+ทุกตารางมีปุ่ม **ดาวน์โหลด Excel** · ปุ่ม **ถาม AI** มุมขวาล่างจะแสดงเมื่อตั้ง `ANTHROPIC_API_KEY`
+
+## ติดตั้งบนเครื่องทีม (หลัง clone)
+
+ต้องมี **Node.js 18.18 ขึ้นไป** และ git
 
 ```bash
+git clone https://github.com/arofatsabuding/data_herb.git
+cd data_herb
 npm install
-npm run import   # อ่าน Excel ใน publicfiles/ แล้วสร้าง data/herb.db
-npm run dev      # เปิด http://localhost:3000
+cp .env.example .env      # Windows: copy .env.example .env
 ```
+
+แก้ `.env` อย่างน้อย:
+
+```ini
+OPENDATA_CRON=off          # เครื่องทีมไม่ต้องดึงข้อมูลอัตโนมัติ 22:00 (เซิร์ฟเวอร์จริงดึงอยู่แล้ว)
+```
+
+รหัสอื่น ๆ (`FETCH_NOW_CODE`, `ADMIN_CODE`, `ADMIN_PAGE_CODE`, `ANTHROPIC_API_KEY`) ขอจากผู้ดูแลโปรเจกต์ — ไม่ต้องใส่ก็รันได้ แต่ปุ่มที่ต้องใช้รหัส/แชท AI จะใช้ไม่ได้
+
+สร้างฐานข้อมูล (ไม่อยู่ใน git) แล้วเปิดเว็บ:
+
+```bash
+npm run import            # ไฟล์ Excel ใน publicfiles/ → data/herb.db
+npm run import:kpi        # ไฟล์ opendata-<ปี>/ → data/kpi.db
+npm run dev               # http://localhost:3000
+```
+
+> ไฟล์ข้อมูลปี 2569 อยู่ใน git แล้ว แต่ไฟล์ใน `publicfiles/opendata-2570/` **ไม่อยู่ใน git** (ไฟล์ใหญ่ ดึงใหม่ทุกวัน)
+> ถ้าต้องการข้อมูลเทียบ 2 ปีบนเครื่องตัวเอง ให้รัน `npm run fetch:opendata` (ใช้อินเทอร์เน็ต ประมาณ 4–8 นาที) หรือขอไฟล์จากผู้ดูแลมาวางในโฟลเดอร์นั้น แล้วรัน `npm run import:kpi`
+
+ใช้กับ **Claude Code**: เปิด `claude` ในโฟลเดอร์โปรเจกต์ — Claude จะอ่าน `CLAUDE.md` เองและทำงานตามกติกาของทีม
 
 ## คำสั่ง
 
 | คำสั่ง | ใช้ทำอะไร |
 |---|---|
-| `npm run import` | สร้างฐานข้อมูล SQLite ใหม่จากไฟล์ Excel |
-| `npm run dev` | รันโหมดพัฒนา (http://localhost:3000) |
-| `npm run build` / `npm start` | build และรันสำหรับใช้งานจริง (http://localhost:4000) |
-| `npm run import:kpi` | นำเข้าข้อมูลตัวชี้วัด (ไฟล์ล่าสุดของทุกโฟลเดอร์ opendata-<ปี>) ลง data/kpi.db — ไม่ต้องปิดเซิร์ฟเวอร์ |
-| `npm run fetch:opendata` | ดึงข้อมูล s_ttm4 จาก opendata.moph.go.th → บันทึก Excel ใน publicfiles/opendata-2570/ → นำเข้า kpi.db |
+| `npm run dev` | โหมดพัฒนา http://localhost:3000 |
+| `npm run build` / `npm start` | build และรันใช้งานจริง http://localhost:4000 |
+| `npm run import` | สร้าง data/herb.db ใหม่จากไฟล์ Excel (ปิดเซิร์ฟเวอร์ก่อน — Windows ล็อกไฟล์) |
+| `npm run import:kpi` | นำเข้าไฟล์ล่าสุดของทุกโฟลเดอร์ `opendata-<ปี>` ลง data/kpi.db (ไม่ต้องปิดเซิร์ฟเวอร์) |
+| `npm run fetch:opendata` | ดึง s_ttm4 จาก opendata.moph.go.th → `publicfiles/opendata-2570/` → นำเข้า kpi.db |
 | `npm run lint` | ตรวจโค้ด |
 
-## อัปเดตไฟล์อ้างอิง (หน้า /admin — ผู้ดูแล)
+## ไฟล์อ้างอิง (publicfiles/)
 
-อัปโหลดไฟล์ฉบับล่าสุดได้จากเมนู **ผู้ดูแล** โดยไม่ต้องปิดเซิร์ฟเวอร์ ต้องกรอกรหัสผู้ดูแล (`ADMIN_CODE` ใน `.env`
-ถ้าไม่ได้ตั้งจะใช้ `FETCH_NOW_CODE`) ระบบจะตรวจชื่อ sheet / หัวคอลัมน์ก่อน ถ้าไม่ถูกต้องจะยังใช้ไฟล์เดิม
-ไฟล์ที่อัปโหลดถูกตั้งชื่อใหม่ตามตารางด้านล่างเสมอ ไฟล์เดิมเก็บสำรองที่ `data/reference-archive/` (5 รุ่นล่าสุด)
-แล้วระบบจะสร้าง data/herb.db ใหม่ + คำนวณตัวชี้วัดทุกไฟล์ใหม่ให้เอง (ประมาณ 15 วินาที)
+อัปเดตได้จากเมนู **ผู้ดูแลระบบ** โดยไม่ต้องปิดเซิร์ฟเวอร์: ระบบตรวจชื่อ sheet/หัวคอลัมน์ก่อน (ไม่ถูกต้อง = ใช้ไฟล์เดิมต่อ)
+ตั้งชื่อไฟล์ใหม่ตามตารางนี้เสมอ สำรองไฟล์เดิมที่ `data/reference-archive/` (5 รุ่นล่าสุด) แล้วสร้างฐานข้อมูล + คำนวณตัวชี้วัดใหม่ (~15 วินาที)
+หรือวางไฟล์เองแล้วรัน `npm run import` + `npm run import:kpi`
 
-| ไฟล์ใน publicfiles/ | ชื่อเดิม | ต้องมี |
+| ไฟล์ | ที่มา / ชื่อเดิม | ต้องมี |
 |---|---|---|
-| `dtam_drug_codes_24.xlsx` | รหัสยา24หลักทั้งหมด.xlsx | sheet ชื่อขึ้นต้นด้วย "เดี่ยว" และ "ตำรับ" มีคอลัมน์ TTMTID, รหัสยาแผนไทย 24 หลัก |
-| `ttmt_master.xls` (หรือ .xlsx) | MasterTTMT_THIS_20260715.xls | TTMTCode, Drug_Group_Nhso |
-| `ttmt_drug_group_rates.xlsx` | ttmt_drug_group.xlsx | drug_group, course, unit |
-| `herbal_drug_master_11.xlsx` | - | code11, full_name, course, price |
-| `health_office.xlsx` | - | code5, name, health_office_type_code, district_code, province_code, health_zone |
-| `health_office_type.xlsx` | - | code, name |
+| `dtam_drug_codes_24.xlsx` | กรมการแพทย์แผนไทยฯ (รหัสยา24หลักทั้งหมด.xlsx) | sheet ขึ้นต้นด้วย "เดี่ยว" และ "ตำรับ", คอลัมน์ TTMTID, รหัสยาแผนไทย 24 หลัก |
+| `ttmt_master.xls` (หรือ .xlsx) | สมสท. (MasterTTMT_THIS_20260715.xls) | TTMTCode, Drug_Group_Nhso |
+| `ttmt_drug_group_rates.xlsx` | อัตราเบิกต่อ Drug Group | drug_group, course, unit (บาท/point) |
+| `herbal_drug_master_11.xlsx` | กลุ่มยา 11 หลัก + ราคาต่อ course (ตัวชี้วัด) | code11, full_name, course, price |
+| `health_office.xlsx` | หน่วยบริการ → อำเภอ/จังหวัด/เขต | code5, name, health_office_type_code, district_code, province_code, health_zone |
+| `health_office_type.xlsx` | ประเภทหน่วยบริการ | code, name |
+| `opendata-<ปี>/Data_<ปี>_sttm4_<แถว>_<dd-mm-yy>[_HH.MM].xlsx` | ข้อมูลการจ่ายยาจาก opendata (1 แถว = หน่วยบริการ × รหัสยา) | — |
 
-หรือวางไฟล์เองใน `publicfiles/` (ใช้ชื่อตามตาราง) แล้วปิดเซิร์ฟเวอร์ รัน `npm run import` + `npm run import:kpi`
+## หลักการรวมข้อมูลยา
 
-## ติดตามตัวชี้วัด (/kpi)
+- ใช้ sheet **เดี่ยว + ตำรับ** (ไม่ใช้ sheet ยกเลิก) · 1 แถวใน Excel = 1 แถวในฐานข้อมูล (รหัส 24 หลักซ้ำได้ เช่น ขนาดบรรจุต่างกัน → TTMTID ต่างกัน)
+- เชื่อม `TTMTID` กับ `TTMTCode` ใน Master · ไม่พบ หรือ `Drug_Group_Nhso` ว่าง → **"ไม่มี Drug Group"**
+- เชื่อม Drug Group กับ `ttmt_drug_group_rates.xlsx` → อัตราเบิกต่อ course เป็น บาท หรือ point
 
-ตัวชี้วัด **มูลค่ายาสมุนไพรในสิทธิ UC** เปรียบเทียบ 2 ปีงบประมาณล่าสุด (2569 → 2570) พร้อมร้อยละการเปลี่ยนแปลง
+## ตัวชี้วัด (/kpi)
 
-เลือกรูปแบบการแสดงผลได้ (พารามิเตอร์ `view` ใน URL)
+**มูลค่ายาสมุนไพรในสิทธิ UC** เทียบ 2 โฟลเดอร์ `opendata-<ปี>` ล่าสุด (ตอนนี้ 2569 → 2570) พร้อมร้อยละการเปลี่ยนแปลง
 
-| รูปแบบ | ต้องระบุ | ตัวอย่าง URL |
-|---|---|---|
-| ภาพรวมหน่วยบริการ | รหัส 5 หลัก (ค่าเริ่มต้น 11442) | `/kpi?view=hosp&hosp=11442` |
-| ภาพรวมอำเภอ | จังหวัด + อำเภอ | `/kpi?view=district&province=96&district=9611` |
-| ภาพรวมจังหวัด | จังหวัด | `/kpi?view=province&province=96` |
-| ภาพรวมเขต | เขตสุขภาพ | `/kpi?view=zone&zone=12` |
-| ภาพรวมประเทศ | - | `/kpi?view=country` (ค่าเริ่มต้น) |
-
-| ไฟล์ใน publicfiles/ | ใช้ทำอะไร |
+| ระดับ | ตัวอย่าง URL |
 |---|---|
-| `opendata-2569/Data_2569_sttm4_<แถว>_<dd-mm-yy>.xlsx` | ข้อมูลการจ่ายยาสมุนไพรปี 2569 (1 แถว = หน่วยบริการ × รหัสยา) |
-| `opendata-2570/Data_2570_sttm4_<แถว>_<dd-mm-yy>_<HH.MM>.xlsx` | ข้อมูลที่ดึงจาก API (ชื่อไฟล์มีเวลา — วันเดียวดึงหลายครั้งได้) ไม่ commit ขึ้น git |
-| `health_office.xlsx` | hospcode → ชื่อหน่วยบริการ, อำเภอ, จังหวัด, เขตสุขภาพ (จับคู่กับ code5) |
-| `health_office_type.xlsx` | ประเภทหน่วยบริการ |
-| `herbal_drug_master_11.xlsx` | กลุ่มยา 11 หลัก + ราคาต่อ course |
-
-ระบบเปรียบเทียบ 2 โฟลเดอร์ `opendata-<ปี>` ล่าสุด (ตอนนี้คือ 2569 กับ 2570) — เพิ่มปีใหม่ได้ด้วยการสร้างโฟลเดอร์ใหม่
+| ประเทศ (ค่าเริ่มต้น) | `/kpi?view=country` |
+| เขตสุขภาพ | `/kpi?view=zone&zone=12` |
+| จังหวัด | `/kpi?view=province&province=96` |
+| อำเภอ | `/kpi?view=district&province=96&district=9611` |
+| หน่วยบริการ | `/kpi?view=hosp&hosp=11442` |
 
 วิธีคำนวณ
-1. ล้าง `didstd` ให้เหลือแต่ตัวเลข แล้วตัด 11 หลักแรก → หากลุ่มใน herbal_drug_master_11
-2. มูลค่าตัวชี้วัด = `vs_uc` × `price` (ไม่พบรายการยาหรือรายการยาถูกยกเลิกรหัส = 0 บาท)
-3. ไม่นำมาคำนวณ: หน่วยบริการในเขตสุขภาพที่ 13 และหน่วยบริการที่ไม่พบเขตสุขภาพ (`EXCLUDED_ZONES` ใน `lib/kpi.js`)
-4. รหัส 24 หลักหลังล้าง → ตรวจกับไฟล์รหัสยาแผนไทย 24 หลัก (ตาราง `dtam24` คัดลอกจาก data/herb.db)
-   เพื่อแสดงชื่อยาและรหัสที่มาของยา — รหัสที่ไม่พบแสดงแยกในรายงาน (ดาวน์โหลด Excel ได้)
-   ถ้าอัปเดตไฟล์รหัส 24 หลัก ให้อัปโหลดจากหน้า /admin (หรือรัน `npm run import` แล้ว `npm run import:kpi`)
-5. อัตรารหัสยาที่ผิดพลาด = จำนวนที่รหัสไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก (รวมรหัสว่าง/ไม่ครบหลัก) ÷ ทั้งหมด × 100
-   นับ 3 แบบ: รายการยา (หน่วยบริการ × รหัสยา), รหัสยาไม่นับซ้ำ, ครั้งที่จ่ายยา UC — แสดงในหน้า /kpi และ /stats
+1. ล้าง `didstd` ให้เหลือแต่ตัวเลข ใช้ 11 หลักแรกหากลุ่มยาใน `herbal_drug_master_11`
+2. มูลค่า = `vs_uc` × `price` — กลุ่มที่ไม่พบ = 0 บาท ("ไม่พบรายการยาหรือรายการยาถูกยกเลิกรหัส")
+3. ไม่นับหน่วยบริการในเขตสุขภาพที่ 13 และที่ไม่พบเขตสุขภาพ (`EXCLUDED_ZONES` ใน `lib/kpi.js`)
+4. รหัส 24 หลัก (หลังล้าง) ตรวจกับไฟล์รหัสยาแผนไทย → ชื่อยา + รหัสที่มาของยา; รหัสที่ไม่พบแสดงแยก (ดาวน์โหลด Excel ได้)
+5. **อัตรารหัสยาที่ผิดพลาด** = รหัสที่ไม่พบในไฟล์รหัส 24 หลัก (รวมรหัสว่าง/ไม่ครบหลัก) ÷ ทั้งหมด × 100 นับตามรายการยา (หน่วยบริการ × รหัสยา)
 
-### เลือกรายงานที่ใช้เปรียบเทียบ (dropdown ในหน้า /kpi) — แยกตามผู้ใช้
+เลือกไฟล์ข้อมูลของแต่ละปีได้จาก dropdown ในหน้า /kpi (ค่าเริ่มต้น "ล่าสุดเสมอ") — เก็บใน cookie `kpi_files` แต่ละคนเลือกต่างกันได้
+ทุกไฟล์เป็น dataset แยกใน kpi.db (~28 MB/ไฟล์) ไฟล์ที่ยังไม่นำเข้าจะนำเข้าเบื้องหลังเมื่อมีคนเลือก (~1 นาที) เก็บสูงสุด `KPI_MAX_DATASETS` ไฟล์
 
-- แต่ละปีเลือกได้ว่าใช้ **ไฟล์ล่าสุดเสมอ** (ค่าเริ่มต้น) หรือไฟล์ของวันใดวันหนึ่ง
-- การตั้งค่าเก็บใน cookie ของเบราว์เซอร์ (`kpi_files`) — แต่ละคนเลือกต่างกันได้ในเวลาเดียวกัน ไม่ต้องตั้งจากเซิร์ฟเวอร์
-- ทุกไฟล์นำเข้าเป็น dataset แยกกันใน data/kpi.db (ประมาณ 28 MB ต่อไฟล์)
-  ไฟล์ที่ยังไม่ได้นำเข้า จะนำเข้าเบื้องหลังเมื่อมีคนเลือก (~1 นาที) ระหว่างนั้นแสดงไฟล์ล่าสุดไปก่อน
-- เก็บไว้ในฐานข้อมูลสูงสุด `KPI_MAX_DATASETS` ไฟล์ (ค่าเริ่มต้น 12) ไฟล์เก่าเกินจะถูกลบออกจากฐานข้อมูล
-  (ไฟล์ Excel ยังอยู่ — ถ้ามีคนเลือกจะนำเข้าใหม่ให้)
+> ⚠️ ตอนนี้ opendata ยังไม่มีข้อมูลปี 2570 ระบบจึงดึงข้อมูล 2569 มาเก็บในโฟลเดอร์ 2570 ไปก่อน (dropdown, หน้าเว็บ และ API จะบอกว่าเป็นข้อมูลปีไหน)
+> เมื่อ API มีข้อมูล 2570 ระบบจะเปลี่ยนไปดึง 2570 เอง (`OPENDATA_FETCH_YEAR=auto`)
 
-### ดึงข้อมูลอัตโนมัติทุกวัน 22:00
+### ดึงข้อมูลอัตโนมัติทุกวัน 22:00 (เซิร์ฟเวอร์จริง)
 
-เมื่อเปิดเว็บ (`npm start` หรือ `npm run dev`) เซิร์ฟเวอร์จะดึงข้อมูลทุกวัน 22:00 (เวลาไทย) ให้เอง
-log อยู่ที่ `logs/opendata-YYYY-MM-DD.log` · สถานะแต่ละรอบอยู่ที่ `data/fetch-status.json` และแสดงในหน้า /kpi
-- ดึงปี 2570 ถ้า API มีข้อมูลแล้ว ถ้ายังไม่มี ใช้ปี 2569 แทนชั่วคราว (ไฟล์ยังตั้งชื่อเป็น 2570 และ dropdown จะบอกว่าเป็นข้อมูลปีไหน)
-- บันทึกไฟล์เฉพาะเมื่อดึงได้ครบทั้ง 77 จังหวัด (ถ้าไม่ครบ ข้อมูลเดิมยังอยู่)
-- ดึงได้ครั้งละ 1 งานเท่านั้น (ล็อกด้วย `data/fetch.lock`) — ถ้ามีคนกำลังดึงอยู่ จะกดดึงซ้ำไม่ได้
-- **ไม่สำเร็จ → ดึงใหม่อีก 5 ครั้ง** (ห่างกัน 10 นาที) ครบแล้วยังไม่สำเร็จ ถือว่าวันนั้น **ไม่มีรายงาน**
-- ถ้าเซิร์ฟเวอร์ปิดอยู่ตอน 22:00 จะเริ่มรอบนั้นให้ 1 นาทีหลังเปิดเซิร์ฟเวอร์
-- **ดึงรายงาน ณ ปัจจุบัน** (ไม่รอ 22:00): ปุ่มในหน้า /kpi ต้องกรอกรหัสยืนยัน (`FETCH_NOW_CODE` ใน `.env`) แล้วกดตกลง
-  หรือรัน `npm run fetch:opendata` บนเซิร์ฟเวอร์
-- บนเซิร์ฟเวอร์จริงควรให้เว็บรันตลอดเวลา เช่น `pm2 start npm --name data_herb -- start` แล้ว `pm2 save` + `pm2 startup`
+- เริ่มเองเมื่อเปิดเว็บ (`instrumentation.js` → `lib/scheduler.js`) · log: `logs/opendata-YYYY-MM-DD.log` · สถานะ: `data/fetch-status.json` (แสดงในหน้า /kpi)
+- บันทึกไฟล์เฉพาะเมื่อดึงครบ 77 จังหวัด · ไม่สำเร็จ → ลองใหม่ 5 ครั้ง ห่าง 10 นาที ครบแล้วยังไม่ได้ = วันนั้น "ไม่มีรายงาน"
+- ดึงได้ครั้งละ 1 งาน (`data/fetch.lock`) · เซิร์ฟเวอร์ปิดอยู่ตอน 22:00 → เริ่มรอบนั้น 1 นาทีหลังเปิด
+- **ดึงรายงาน ณ ปัจจุบัน**: ปุ่มในหน้า /kpi (ต้องใส่ `FETCH_NOW_CODE`) หรือ `npm run fetch:opendata`
 
-ตั้งค่าใน `.env` (ดูตัวอย่างที่ `.env.example`)
+## สำหรับ AI และระบบภายนอก
+
+ข้อมูลอ่านอย่างเดียว เปิดให้ทุกคนใช้ ไม่ต้องใช้ key — คู่มือเต็มที่ `/api-docs`
+
+| ช่องทาง | URL | ใช้กับ |
+|---|---|---|
+| MCP server (Streamable HTTP) | `/api/mcp` | Claude (Settings → Connectors → Add custom connector), Claude Code: `claude mcp add --transport http data-herb https://drug.thaipadi.com/api/mcp` |
+| REST API (JSON) | `/api/v1`, เอกสาร `/api/v1/openapi.json` | ChatGPT Actions, สคริปต์, ระบบอื่น |
+| llms.txt | `/llms.txt` | AI ที่เข้ามาอ่านเว็บ |
+| แชทในเว็บ | `/api/chat` + ปุ่ม "ถาม AI" | ผู้ใช้เว็บ (Claude Opus 5.5, จำกัด 20 ข้อความ/IP/ชม. และ 500/วัน) |
+
+ตัวอย่าง: `GET /api/v1/drugs/<รหัส 24 หลัก>` · `GET /api/v1/kpi/hosp/11442` · `GET /api/v1/kpi/areas?q=สารภี` · `GET /api/v1/kpi?level=province&code=50`
+
+ทั้ง 3 ช่องทางใช้เครื่องมือชุดเดียวกันใน `lib/agent-tools.js`
+
+## ตั้งค่า (.env)
+
+ดูตัวอย่างทั้งหมดที่ `.env.example` — `.env` ไม่ขึ้น git
 
 | ตัวแปร | ค่าเริ่มต้น | ความหมาย |
 |---|---|---|
-| `FETCH_NOW_CODE` | (ต้องตั้ง) | รหัสยืนยันสำหรับปุ่มดึงรายงาน ณ ปัจจุบัน — ไม่ตั้ง = ปุ่มใช้ไม่ได้ |
-| `ADMIN_CODE` | ใช้ `FETCH_NOW_CODE` | รหัสผู้ดูแลสำหรับอัปโหลดไฟล์อ้างอิงในหน้า /admin |
-| `OPENDATA_FETCH_YEAR` | `auto` | ปีที่ส่งให้ API — `auto` = ใช้ 2570 เมื่อ API มีข้อมูล |
-| `OPENDATA_FALLBACK_YEAR` | 2569 | ปีที่ใช้แทนระหว่างที่ API ยังไม่มีข้อมูล 2570 (`none` = ไม่ดึง) |
-| `OPENDATA_CRON` | เปิด | `off` = ปิดการดึงอัตโนมัติ (เช่น เครื่องทีมที่รัน dev) |
-| `OPENDATA_CRON_TIME` | `0 22 * * *` | เวลาแบบ cron |
-| `KPI_MAX_DATASETS` | 12 | จำนวนไฟล์ที่เก็บในฐานข้อมูลพร้อมกัน |
+| `FETCH_NOW_CODE` | (ไม่ตั้ง = ปุ่มใช้ไม่ได้) | รหัสยืนยันปุ่ม "ดึงรายงาน ณ ปัจจุบัน" |
+| `ADMIN_PAGE_CODE` | ค่าในโค้ด | รหัสเข้าเมนูผู้ดูแลระบบ — **เซิร์ฟเวอร์จริงควรตั้งเสมอ** |
+| `ADMIN_CODE` | ใช้ `FETCH_NOW_CODE` | รหัสยืนยันการอัปโหลดไฟล์อ้างอิง |
+| `ANTHROPIC_API_KEY` | (ไม่ตั้ง = ไม่มีปุ่มแชท) | key ของ Claude สำหรับแชท AI (มีค่าใช้จ่าย) |
+| `CHAT_MODEL` / `CHAT_PER_IP` / `CHAT_PER_DAY` / `CHAT_ENABLED` | `claude-opus-5-5` / 20 / 500 / เปิด | โมเดล, โควตาแชท, `0` = ปิดแชทชั่วคราว |
+| `OPENDATA_CRON` | เปิด | `off` = ไม่ดึงอัตโนมัติ (เครื่องทีม) |
+| `OPENDATA_CRON_TIME` | `0 22 * * *` | เวลาดึง (cron) |
+| `OPENDATA_FETCH_YEAR` / `OPENDATA_FALLBACK_YEAR` | `auto` / 2569 | ปีที่ดึง / ปีที่ใช้แทนเมื่อยังไม่มีข้อมูล (`none` = ไม่ดึง) |
+| `KPI_MAX_DATASETS` | 12 | จำนวนไฟล์ตัวชี้วัดที่เก็บในฐานข้อมูลพร้อมกัน |
 
-## โครงสร้าง
+## โครงสร้างโปรเจกต์
 
 ```
-app/                หน้าเว็บ (Next.js App Router)
-  page.jsx          หน้าแรก
-  search/           ค้นหา + ตัวกรอง + แบ่งหน้า
-  drug/[id]/        รายละเอียดยา
-  groups/           รายการ Drug Group
-  kpi/              ติดตามตัวชี้วัด (+ actions.js เลือกไฟล์ / ดึงข้อมูล)
-  admin/            ผู้ดูแล: อัปโหลดไฟล์อ้างอิง
-  stats/            สรุปข้อมูล (ตัวชี้วัด + รหัสยา)
-  api/kpi/          ดาวน์โหลด Excel รหัส 24 หลักที่ไม่พบ
-  api/export/       ดาวน์โหลด Excel ผลค้นหายา
-components/         ส่วนประกอบหน้าเว็บ
-lib/drugs.js        ฟังก์ชันค้นหาข้อมูล (ใช้ร่วมกับ API/แชทบอท)
-lib/kpi.js          ฟังก์ชันสรุปตัวชี้วัด
-lib/scheduler.js    ตั้งเวลาดึงข้อมูล 22:00
-scripts/            import.js + schema.sql, import-kpi.js, fetch-opendata.js, reference-files.js (ชื่อไฟล์อ้างอิง + ตรวจรูปแบบ)
-publicfiles/        ไฟล์ Excel ต้นทาง
-data/herb.db        ฐานข้อมูลยา (npm run import, ไม่ commit)
-data/kpi.db         ฐานข้อมูลตัวชี้วัด (npm run import:kpi, ไม่ commit)
+app/                 หน้าเว็บ + API (Next.js App Router)
+  search/ drug/[id]/ groups/ kpi/ stats/ admin/ api-docs/
+  api/v1/ api/mcp/ api/chat/      REST API / MCP / แชท AI
+  api/export/ api/kpi/ api/admin/ ดาวน์โหลด Excel / ไฟล์ระบบ
+  llms.txt/
+components/          ส่วนประกอบหน้าเว็บ (ExcelButton, ChatWidget, NavLinks, Kpi*, …)
+lib/                 drugs.js, kpi.js, agent-tools.js, scheduler.js, excel.js, db.js, …
+scripts/             import.js + schema.sql, import-kpi.js + kpi-lib.js, fetch-opendata.js, reference-files.js
+publicfiles/         ไฟล์ Excel ต้นทาง (opendata-2570/*.xlsx ไม่อยู่ใน git)
+data/                herb.db, kpi.db, สถานะการดึงข้อมูล (ไม่อยู่ใน git)
+logs/                log การดึงข้อมูล (ไม่อยู่ใน git)
 ```
 
-## หลักการรวมข้อมูล
+## ติดตั้งบนเซิร์ฟเวอร์จริง
 
-- 1 แถวในฐานข้อมูล = 1 แถวใน Excel (sheet เดี่ยว + ตำรับ, ไม่ใช้ sheet ยกเลิก)
-- เชื่อม `TTMTID` กับ `TTMTCode` ใน Master
-- ถ้าไม่พบใน Master หรือไม่มีค่า `Drug_Group_Nhso` → แสดง "ไม่มี Drug Group"
-- เชื่อม Drug Group กับ `ttmt_drug_group_rates.xlsx` → อัตราเบิกต่อ course (`course`) เป็น บาท หรือ point (`unit`)
-- ถ้าเซิร์ฟเวอร์เปิดอยู่ ให้ปิดก่อนรัน `npm run import` (Windows ล็อกไฟล์ฐานข้อมูล)
-- รหัส 24 หลักบางรหัสซ้ำกันได้ (TTMTID ต่างกัน เช่น ขนาดบรรจุต่างกัน)
+```bash
+npm ci && npm run import && npm run import:kpi && npm run build
+pm2 start npm --name data_herb -- start   # รันตลอด + เริ่มเองหลังรีบูต: pm2 save && pm2 startup
+```
+
+ตอนนี้เปิดสู่อินเทอร์เน็ตผ่าน Cloudflare Tunnel (drug.thaipadi.com → localhost:4000)
+อัปเดตโค้ด: `git pull` → หยุดเว็บ → `npm ci` (ถ้า package เปลี่ยน) → `npm run build` → เริ่มเว็บใหม่ → เปิดเว็บตรวจว่าหน้าตาปกติ
