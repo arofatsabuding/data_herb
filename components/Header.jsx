@@ -18,7 +18,7 @@ export default function Header() {
             <LeafIcon className="h-6 w-6 text-white" />
           </span>
           <span className="leading-tight">
-            <span className="block text-lg font-bold text-white">Data Herb</span>
+            <span className="block text-lg font-bold text-white">HERB Center</span>
             <span className="block text-xs text-emerald-300">ฐานข้อมูลรหัสยาสมุนไพร</span>
           </span>
         </Link>

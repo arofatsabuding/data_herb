@@ -6,7 +6,7 @@ import { listFilterOptions, searchDrugs } from '@/lib/drugs';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'ข้อมูลยา — Data Herb' };
+export const metadata = { title: 'ข้อมูลยา — HERB Center' };
 
 export default async function SearchPage({ searchParams }) {
   const sp = await searchParams;

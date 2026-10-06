@@ -7,7 +7,7 @@ import { PREF_COOKIE, kpiAvailable, parsePrefs, resolveSets } from '@/lib/kpi';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'สรุป — Data Herb' };
+export const metadata = { title: 'สรุป — HERB Center' };
 
 const fmt = (n) => Number(n || 0).toLocaleString('th-TH');
 const pct = (a, b) => (b ? ((a / b) * 100).toFixed(1) : '0.0');

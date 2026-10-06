@@ -9,7 +9,7 @@ import { uploadReference } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'ผู้ดูแลระบบ — Data Herb' };
+export const metadata = { title: 'ผู้ดูแลระบบ — HERB Center' };
 
 const when = (t) =>
   new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }) + ' น.';

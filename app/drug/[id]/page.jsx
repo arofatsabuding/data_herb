@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }) {
   const drug = getDrug((await params).id);
-  return { title: drug ? `${drug.drug_name} — Data Herb` : 'ไม่พบรายการ — Data Herb' };
+  return { title: drug ? `${drug.drug_name} — HERB Center` : 'ไม่พบรายการ — HERB Center' };
 }
 
 function Field({ label, value, mono }) {

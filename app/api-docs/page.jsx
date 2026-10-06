@@ -5,7 +5,7 @@ import { ENDPOINTS } from '@/lib/openapi';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'API สำหรับ AI — Data Herb' };
+export const metadata = { title: 'API สำหรับ AI — HERB Center' };
 
 function Code({ children }) {
   return <pre className="mono overflow-x-auto rounded-xl bg-navy-900 p-4 text-sm text-emerald-200">{children}</pre>;
@@ -30,7 +30,7 @@ export default async function ApiDocsPage() {
         <ul className="list-disc space-y-1 pl-5 text-sm text-gray-600">
           <li>Claude (เว็บ/แอป): Settings → Connectors → Add custom connector → วาง URL ด้านบน</li>
           <li>
-            Claude Code: <span className="mono">claude mcp add --transport http data-herb {mcp}</span>
+            Claude Code: <span className="mono">claude mcp add --transport http herb-center {mcp}</span>
           </li>
           <li>จากนั้นถามได้เลย เช่น “ผลงานยาสมุนไพร UC ของ รพ.สารภี เป็นเท่าไหร่” หรือ “รหัส 24 หลัก 4100… มี TTMTID อะไร”</li>
         </ul>

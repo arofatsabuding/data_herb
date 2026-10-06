@@ -5,7 +5,7 @@ import { listDrugGroups } from '@/lib/drugs';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'Drug Group — Data Herb' };
+export const metadata = { title: 'Drug Group — HERB Center' };
 
 export default function GroupsPage() {
   const groups = listDrugGroups();

@@ -11,7 +11,7 @@ import NavProgress from '@/components/NavProgress';
 import { chatEnabled } from '@/lib/chat-limit';
 
 export const metadata = {
-  title: 'Data Herb — ค้นหารหัสยาสมุนไพร',
+  title: 'HERB Center — ค้นหารหัสยาสมุนไพร',
   description: 'รวมรหัสยาแผนไทย 24 หลัก (กรมการแพทย์แผนไทยฯ) กับ TTMT Master (สมสท.) และ Drug Group',
 };
 

@@ -1,4 +1,4 @@
-# Data Herb — ฐานข้อมูลรหัสยาสมุนไพร
+# HERB Center — ฐานข้อมูลรหัสยาสมุนไพร
 
 เว็บรวม **รหัสยาแผนไทย 24 หลัก** (กรมการแพทย์แผนไทยและการแพทย์ทางเลือก) กับ **TTMT Master** (สมสท.)
 เพื่อดูว่ายาแต่ละรายการมี TTMTID อะไร อยู่ใน Drug Group ใด เบิกได้เท่าไหร่ต่อ course
@@ -127,7 +127,7 @@ npm run dev               # http://localhost:3000
 
 | ช่องทาง | URL | ใช้กับ |
 |---|---|---|
-| MCP server (Streamable HTTP) | `/api/mcp` | Claude (Settings → Connectors → Add custom connector), Claude Code: `claude mcp add --transport http data-herb https://drug.thaipadi.com/api/mcp` |
+| MCP server (Streamable HTTP) | `/api/mcp` | Claude (Settings → Connectors → Add custom connector), Claude Code: `claude mcp add --transport http herb-center https://drug.thaipadi.com/api/mcp` |
 | REST API (JSON) | `/api/v1`, เอกสาร `/api/v1/openapi.json` | ChatGPT Actions, สคริปต์, ระบบอื่น |
 | llms.txt | `/llms.txt` | AI ที่เข้ามาอ่านเว็บ |
 | แชทในเว็บ | `/api/chat` + ปุ่ม "ถาม AI" | ผู้ใช้เว็บ (Claude Opus 5.5, จำกัด 20 ข้อความ/IP/ชม. และ 500/วัน) |

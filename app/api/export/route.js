@@ -12,5 +12,5 @@ export function GET(request) {
   for (const row of iterateDrugs(filters)) rows.push(drugExportRow(row));
 
   const stamp = new Date().toISOString().slice(0, 10);
-  return xlsxResponse(`data_herb_${stamp}.xlsx`, [{ name: 'ข้อมูลยา', rows }]);
+  return xlsxResponse(`herb_center_${stamp}.xlsx`, [{ name: 'ข้อมูลยา', rows }]);
 }

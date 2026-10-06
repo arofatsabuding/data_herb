@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export function GET(request) {
   const o = publicOrigin(request);
-  const text = `# Data Herb
+  const text = `# HERB Center
 
 > ค้นหารหัสยาแผนไทย 24 หลัก (กรมการแพทย์แผนไทยฯ) รวมกับ TTMT Master (สมสท.) และ Drug Group พร้อมตัวชี้วัด "มูลค่ายาสมุนไพรในสิทธิ UC" รายหน่วยบริการ/อำเภอ/จังหวัด/เขต/ประเทศ ข้อมูลเปิดให้อ่านได้ ไม่ต้องใช้ key
 

@@ -6,7 +6,7 @@ import { CORS, json, preflight } from '@/lib/api-http';
 export const dynamic = 'force-dynamic';
 
 const SUPPORTED_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
-const SERVER_INFO = { name: 'data-herb', title: 'Data Herb — รหัสยาสมุนไพรและตัวชี้วัด', version: '1.0.0' };
+const SERVER_INFO = { name: 'herb-center', title: 'HERB Center — รหัสยาสมุนไพรและตัวชี้วัด', version: '1.0.0' };
 const INSTRUCTIONS =
   'ข้อมูลรหัสยาแผนไทย 24 หลัก + TTMT Master + Drug Group และตัวชี้วัด "มูลค่ายาสมุนไพรในสิทธิ UC" รายหน่วยบริการ/พื้นที่ ' +
   'ถามรหัส 24 หลัก → get_drug_by_code24; ถามผลงานหน่วยบริการ → kpi_report (ถ้ารู้แค่ชื่อ ใช้ kpi_find_area หารหัสก่อน) ' +

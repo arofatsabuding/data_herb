@@ -29,7 +29,7 @@ import { checkFetch, fetchNow, selectFile } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'ตัวชี้วัด — Data Herb' };
+export const metadata = { title: 'ตัวชี้วัด — HERB Center' };
 
 const num = (n) => Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 0 });
 const million = (n) => (Number(n || 0) / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 2 });

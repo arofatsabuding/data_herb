@@ -53,7 +53,7 @@ export default function ExcelButton({
   tables,
   sheets,
   sheetsFirst = false,
-  filename = 'data_herb',
+  filename = 'herb_center',
   label = 'ดาวน์โหลด Excel',
   tone = 'emerald',
   className = '',

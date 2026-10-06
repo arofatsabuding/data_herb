@@ -30,7 +30,7 @@ export default function Footer() {
               <LeafIcon className="h-6 w-6 text-white" />
             </span>
             <span className="leading-tight">
-              <span className="block text-lg font-bold text-white">Data Herb</span>
+              <span className="block text-lg font-bold text-white">HERB Center</span>
               <span className="block text-xs text-emerald-300">ฐานข้อมูลรหัสยาสมุนไพร</span>
             </span>
           </Link>
@@ -98,7 +98,7 @@ export default function Footer() {
 
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-gray-500 sm:flex-row">
-          <span>© {new Date().getFullYear()} Data Herb · ข้อมูลเพื่อการอ้างอิง ควรตรวจสอบกับหน่วยงานต้นทางก่อนใช้งานจริง</span>
+          <span>© {new Date().getFullYear()} HERB Center · ข้อมูลเพื่อการอ้างอิง ควรตรวจสอบกับหน่วยงานต้นทางก่อนใช้งานจริง</span>
           <a href="/api-docs" className="text-emerald-400 transition-colors hover:text-emerald-300">
             API / MCP สำหรับ AI →
           </a>
