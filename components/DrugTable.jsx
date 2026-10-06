@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { GroupBadge, TypeBadge } from './Badges';
+import { GroupBadge, RateBadge, TypeBadge } from './Badges';
 
 export default function DrugTable({ rows }) {
   if (!rows.length) {
@@ -18,6 +18,7 @@ export default function DrugTable({ rows }) {
               <th className="px-4 py-3 font-semibold">รหัส 24 หลัก</th>
               <th className="px-4 py-3 font-semibold">TTMTID</th>
               <th className="px-4 py-3 font-semibold">Drug Group</th>
+              <th className="px-4 py-3 font-semibold">เบิกได้ / course</th>
               <th className="px-4 py-3 font-semibold">ผู้ผลิต</th>
             </tr>
           </thead>
@@ -41,6 +42,9 @@ export default function DrugTable({ rows }) {
                 <td className="mono px-4 py-3 text-gray-700">{d.ttmtid}</td>
                 <td className="px-4 py-3">
                   <GroupBadge drug={d} />
+                </td>
+                <td className="px-4 py-3">
+                  <RateBadge amount={d.reimburse_amount} unit={d.reimburse_unit} />
                 </td>
                 <td className="max-w-xs px-4 py-3 text-gray-600">{d.manufacturer}</td>
               </tr>
@@ -73,6 +77,10 @@ export default function DrugTable({ rows }) {
                   ) : (
                     <span className="badge bg-gray-100 text-gray-500">ไม่มี Drug Group</span>
                   )}
+                </span>
+                <span className="text-gray-500">เบิกได้</span>
+                <span>
+                  <RateBadge amount={d.reimburse_amount} unit={d.reimburse_unit} />
                 </span>
               </div>
             </Link>

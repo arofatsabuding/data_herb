@@ -6,6 +6,8 @@ const COLUMNS = [
   ['code24', 'รหัสยาแผนไทย 24 หลัก'],
   ['ttmtid', 'TTMTID'],
   ['drug_group', 'Drug Group'],
+  ['reimburse_amount', 'เบิกได้ต่อ course'],
+  ['reimburse_unit', 'หน่วยเบิก'],
   ['drug_type', 'ประเภท'],
   ['drug_name', 'ชื่อยา'],
   ['trade_name', 'ชื่อการค้า/ชื่อเดิม'],
@@ -29,9 +31,10 @@ const cell = (v) => {
 
 export function GET(request) {
   const sp = request.nextUrl.searchParams;
-  const filters = { q: sp.get('q') || '', type: sp.get('type') || '', group: sp.get('group') || '' };
+  const filters = { q: sp.get('q') || '', type: sp.get('type') || '', group: sp.get('group') || '', unit: sp.get('unit') || '' };
 
-  const lines = ['﻿' + COLUMNS.map(([, h]) => h).join(',')];
+  const BOM = String.fromCharCode(0xfeff); // ให้ Excel อ่านภาษาไทยถูก
+  const lines = [BOM + COLUMNS.map(([, h]) => h).join(',')];
   for (const row of iterateDrugs(filters)) {
     lines.push(
       COLUMNS.map(([k]) => (k === 'drug_group' && !row.has_drug_group ? 'ไม่มี Drug Group' : cell(row[k]))).join(',')

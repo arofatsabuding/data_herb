@@ -99,6 +99,27 @@ export default function Home() {
               </Link>
             ))}
           </div>
+          <h3 className="mb-3 mt-8 font-bold text-gray-800">หน่วยการเบิกของรายการที่มี Drug Group</h3>
+          <div className="grid gap-4 md:grid-cols-2">
+            {s.byUnit.map((u) => (
+              <Link
+                key={u.unit}
+                href={`/search?unit=${encodeURIComponent(u.unit)}`}
+                className={`rounded-xl border p-4 transition-colors ${
+                  u.unit === 'point'
+                    ? 'border-violet-100 bg-violet-50 hover:border-violet-300'
+                    : 'border-amber-100 bg-amber-50 hover:border-amber-300'
+                }`}
+              >
+                <div className={`font-semibold ${u.unit === 'point' ? 'text-violet-800' : 'text-amber-800'}`}>
+                  เบิกเป็น {u.unit}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {u.total.toLocaleString('th-TH')} รายการ · {u.groups.toLocaleString('th-TH')} Drug Group
+                </div>
+              </Link>
+            ))}
+          </div>
           <p className="mt-6 text-sm text-gray-500">
             &quot;ไม่มี Drug Group&quot; หมายถึง TTMTID ไม่อยู่ใน TTMT Master หรืออยู่แต่ไม่ได้ระบุ Drug Group
           </p>

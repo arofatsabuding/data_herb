@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { RateBadge } from '@/components/Badges';
 import { listDrugGroups } from '@/lib/drugs';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,10 @@ export default function GroupsPage() {
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="mono text-lg font-bold text-emerald-700">{g.drug_group}</span>
               <span className="badge bg-emerald-100 text-emerald-700">{g.total.toLocaleString('th-TH')} รายการ</span>
+            </div>
+            <div className="mb-3 flex items-center gap-2 text-sm">
+              <span className="text-gray-500">เบิกได้ / course</span>
+              <RateBadge amount={g.reimburse_amount} unit={g.reimburse_unit} />
             </div>
             <div className="mb-2 text-sm text-gray-700">{g.ingredients.join(', ') || '-'}</div>
             <div className="text-xs text-gray-500">

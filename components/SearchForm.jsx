@@ -1,7 +1,7 @@
 import { SearchIcon } from './Icons';
 
 // ฟอร์มค้นหาแบบ GET ธรรมดา — ทำงานได้แม้ปิด JavaScript
-export default function SearchForm({ q = '', type = '', group = '', compact = false }) {
+export default function SearchForm({ q = '', type = '', group = '', unit = '', compact = false }) {
   return (
     <form action="/search" method="get" className={compact ? 'card p-4' : ''}>
       <div className="flex flex-col gap-3 md:flex-row">
@@ -26,6 +26,11 @@ export default function SearchForm({ q = '', type = '', group = '', compact = fa
               <option value="">ทุกสถานะ Drug Group</option>
               <option value="has">มี Drug Group</option>
               <option value="none">ไม่มี Drug Group</option>
+            </select>
+            <select name="unit" defaultValue={unit} className="input md:w-44">
+              <option value="">ทุกหน่วยเบิก</option>
+              <option value="บาท">เบิกเป็นบาท</option>
+              <option value="point">เบิกเป็น point</option>
             </select>
           </>
         )}

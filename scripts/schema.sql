@@ -45,6 +45,15 @@ CREATE TABLE ttmt_master (
 );
 CREATE INDEX idx_master_group ON ttmt_master(drug_group_nhso);
 
+-- อัตราเบิกของแต่ละ Drug Group (จาก ttmt_drug_group.xlsx)
+CREATE TABLE drug_group_rates (
+  drug_group TEXT PRIMARY KEY,
+  course     REAL,      -- จำนวนที่เบิกได้ต่อ course
+  unit       TEXT,      -- บาท / point
+  type       INTEGER,   -- 1 = บาท, 2 = point
+  subtype    INTEGER
+);
+
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 
 -- มุมมองรวม: ทุกรหัส 24 หลัก + ข้อมูลจาก Master (ถ้ามี)
@@ -61,6 +70,9 @@ SELECT d.*,
        m.fsn                         AS master_fsn,
        m.ttmt_type                   AS master_ttmt_type,
        m.ed                          AS master_ed,
-       m.change_date                 AS master_change_date
+       m.change_date                 AS master_change_date,
+       r.course                      AS reimburse_amount,
+       r.unit                        AS reimburse_unit
   FROM drug_codes d
-  LEFT JOIN ttmt_master m ON m.ttmt_code = d.ttmtid;
+  LEFT JOIN ttmt_master m ON m.ttmt_code = d.ttmtid
+  LEFT JOIN drug_group_rates r ON r.drug_group = m.drug_group_nhso;

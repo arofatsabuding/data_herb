@@ -57,6 +57,7 @@ export default function StatsPage() {
     ['พบ TTMTID ใน Master', s.in_master],
     ['มี Drug Group', s.with_group],
     ['ไม่มี Drug Group', s.without_group],
+    ...s.byUnit.map((u) => [`เบิกเป็น ${u.unit} (${u.groups} กลุ่ม)`, u.total]),
     ['จำนวน Drug Group', s.groups],
     ['จำนวนผู้ผลิต', s.manufacturers],
   ];

@@ -12,6 +12,7 @@ const DB_PATH = path.join(ROOT, 'data', 'herb.db');
 const CODES_FILE = path.join(SRC_DIR, 'รหัสยา24หลักทั้งหมด.xlsx');
 const MASTER_FILE = fs.readdirSync(SRC_DIR).find((f) => /^MasterTTMT.*\.xlsx?$/i.test(f));
 if (!MASTER_FILE) throw new Error('ไม่พบไฟล์ MasterTTMT*.xls ในโฟลเดอร์ publicfiles/');
+const RATES_FILE = path.join(SRC_DIR, 'ttmt_drug_group.xlsx');
 
 // ล้างช่องว่าง/ขึ้นบรรทัด และแปลงทุกค่าเป็นข้อความ (กันเลข 0 นำหน้าหาย)
 const clean = (v) => {
@@ -99,6 +100,21 @@ function readMaster() {
     .filter((r) => r.ttmt_code);
 }
 
+// อัตราเบิกต่อ Drug Group (course = จำนวนที่เบิกได้, unit = บาท / point)
+function readRates() {
+  const wb = XLSX.readFile(RATES_FILE);
+  return XLSX.utils
+    .sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: null })
+    .map((r) => ({
+      drug_group: clean(r.drug_group),
+      course: r.course === null || r.course === '' ? null : Number(r.course),
+      unit: clean(r.unit),
+      type: r.type === null ? null : Number(r.type),
+      subtype: r.subtype === null ? null : Number(r.subtype),
+    }))
+    .filter((r) => r.drug_group);
+}
+
 function insertAll(db, table, columns, rows) {
   const stmt = db.prepare(
     `INSERT INTO ${table} (${columns.join(',')}) VALUES (${columns.map((c) => '@' + c).join(',')})`
@@ -114,6 +130,9 @@ function main() {
   console.log(`อ่าน ${MASTER_FILE}...`);
   const master = readMaster();
   console.log(`  master: ${master.length} แถว`);
+  console.log('อ่าน ttmt_drug_group.xlsx...');
+  const rates = readRates();
+  console.log(`  อัตราเบิก: ${rates.length} Drug Group`);
 
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   const tmp = DB_PATH + '.tmp';
@@ -123,22 +142,33 @@ function main() {
 
   insertAll(db, 'drug_codes', ['drug_type', ...Object.values(CODE_COLUMNS)], codes);
   insertAll(db, 'ttmt_master', Object.keys(master[0]), master);
+  insertAll(db, 'drug_group_rates', Object.keys(rates[0]), rates);
   const meta = db.prepare('INSERT INTO meta (key, value) VALUES (?, ?)');
   meta.run('imported_at', new Date().toISOString());
   meta.run('codes_file', path.basename(CODES_FILE));
   meta.run('master_file', MASTER_FILE);
+  meta.run('rates_file', path.basename(RATES_FILE));
 
   const s = db
-    .prepare('SELECT COUNT(*) total, SUM(in_master) in_master, SUM(has_drug_group) with_group FROM drug_lookup')
+    .prepare('SELECT COUNT(*) total, SUM(in_master) in_master, SUM(has_drug_group) with_group, SUM(reimburse_unit IS NOT NULL) with_rate FROM drug_lookup')
     .get();
   db.close();
-  fs.renameSync(tmp, DB_PATH);
+  try {
+    fs.renameSync(tmp, DB_PATH);
+  } catch (err) {
+    if (err.code === 'EPERM' || err.code === 'EBUSY') {
+      console.error('\nเขียนทับ data/herb.db ไม่ได้ — ไฟล์ถูกเปิดอยู่ ให้ปิดเซิร์ฟเวอร์ (npm run dev / npm start) แล้วรันใหม่');
+      process.exit(1);
+    }
+    throw err;
+  }
 
   console.log(`\nสร้าง ${path.relative(ROOT, DB_PATH)} เรียบร้อย`);
   console.log(`  รายการทั้งหมด      : ${s.total}`);
   console.log(`  พบใน Master        : ${s.in_master}`);
   console.log(`  มี Drug Group       : ${s.with_group}`);
   console.log(`  ไม่มี Drug Group     : ${s.total - s.with_group}`);
+  console.log(`  มีอัตราเบิก         : ${s.with_rate}`);
 }
 
 main();

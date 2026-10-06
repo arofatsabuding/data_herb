@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { GroupBadge, TypeBadge } from '@/components/Badges';
+import { formatRate, GroupBadge, TypeBadge } from '@/components/Badges';
 import DrugTable from '@/components/DrugTable';
 import { ArrowLeftIcon } from '@/components/Icons';
 import { getDrug, getSiblings } from '@/lib/drugs';
@@ -43,11 +43,12 @@ export default async function DrugPage({ params }) {
           </div>
           <h1 className="mb-1 text-3xl font-bold">{drug.drug_name}</h1>
           <p className="mb-6 text-gray-300">{drug.manufacturer}</p>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               ['รหัสยาแผนไทย 24 หลัก', drug.code24],
               ['TTMTID', drug.ttmtid],
               ['Drug Group (สปสช.)', drug.has_drug_group ? drug.drug_group : 'ไม่มี Drug Group'],
+              ['เบิกได้ / course', formatRate(drug.reimburse_amount, drug.reimburse_unit) || 'ไม่มีอัตราเบิก'],
             ].map(([label, value]) => (
               <div key={label} className="rounded-xl border border-white/10 bg-white/5 p-4">
                 <div className="text-xs text-emerald-300">{label}</div>
@@ -84,6 +85,7 @@ export default async function DrugPage({ params }) {
             <dl className="divide-y divide-gray-100">
               <Field label="TTMTCode" value={drug.ttmtid} mono />
               <Field label="Drug Group สปสช." value={drug.drug_group || 'ไม่ระบุ'} mono />
+              <Field label="อัตราเบิก / course" value={formatRate(drug.reimburse_amount, drug.reimburse_unit)} />
               <Field label="ตัวยาสำคัญ" value={drug.master_active_ingredient} />
               <Field label="ความแรง" value={drug.master_strength} />
               <Field label="รูปแบบยา" value={drug.master_dosage_form} />

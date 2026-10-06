@@ -29,6 +29,7 @@ npm run dev      # เปิด http://localhost:3000
 1. วางไฟล์ใหม่ใน `publicfiles/`
    - `รหัสยา24หลักทั้งหมด.xlsx` (ใช้ sheet ที่ชื่อขึ้นต้นด้วย "เดี่ยว" และ "ตำรับ")
    - `MasterTTMT*.xls` (มีได้ไฟล์เดียว)
+   - `ttmt_drug_group.xlsx` (อัตราเบิกต่อ Drug Group: คอลัมน์ drug_group, course, unit)
 2. รัน `npm run import` แล้วรีสตาร์ทเซิร์ฟเวอร์
 
 ## โครงสร้าง
@@ -53,4 +54,6 @@ data/herb.db        ฐานข้อมูล (สร้างจาก npm ru
 - 1 แถวในฐานข้อมูล = 1 แถวใน Excel (sheet เดี่ยว + ตำรับ, ไม่ใช้ sheet ยกเลิก)
 - เชื่อม `TTMTID` กับ `TTMTCode` ใน Master
 - ถ้าไม่พบใน Master หรือไม่มีค่า `Drug_Group_Nhso` → แสดง "ไม่มี Drug Group"
+- เชื่อม Drug Group กับ `ttmt_drug_group.xlsx` → อัตราเบิกต่อ course (`course`) เป็น บาท หรือ point (`unit`)
+- ถ้าเซิร์ฟเวอร์เปิดอยู่ ให้ปิดก่อนรัน `npm run import` (Windows ล็อกไฟล์ฐานข้อมูล)
 - รหัส 24 หลักบางรหัสซ้ำกันได้ (TTMTID ต่างกัน เช่น ขนาดบรรจุต่างกัน)
