@@ -1,14 +1,17 @@
 import Link from 'next/link';
 import { LeafIcon } from './Icons';
+import { AdminNavButton } from './AdminLogin';
 
 const NAV = [
   { href: '/', label: 'หน้าหลัก' },
   { href: '/search', label: 'ค้นหายา' },
   { href: '/groups', label: 'Drug Group' },
   { href: '/kpi', label: 'ติดตามตัวชี้วัด' },
-  { href: '/admin', label: 'ผู้ดูแล' },
   { href: '/stats', label: 'สรุปข้อมูล' },
 ];
+
+const NAV_ITEM =
+  'rounded-full px-3 py-2 text-gray-300 transition-colors duration-300 hover:bg-white/10 hover:text-white';
 
 export default function Header() {
   return (
@@ -25,14 +28,11 @@ export default function Header() {
         </Link>
         <nav className="-mx-1 flex items-center gap-1 overflow-x-auto whitespace-nowrap text-sm">
           {NAV.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="rounded-full px-3 py-2 text-gray-300 transition-colors duration-300 hover:bg-white/10 hover:text-white"
-            >
+            <Link key={n.href} href={n.href} className={NAV_ITEM}>
               {n.label}
             </Link>
           ))}
+          <AdminNavButton className={NAV_ITEM} />
         </nav>
       </div>
     </header>

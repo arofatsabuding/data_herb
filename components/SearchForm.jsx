@@ -1,7 +1,16 @@
 import { SearchIcon } from './Icons';
 
 // ฟอร์มค้นหาแบบ GET ธรรมดา — ทำงานได้แม้ปิด JavaScript
-export default function SearchForm({ q = '', type = '', group = '', unit = '', compact = false }) {
+export default function SearchForm({
+  q = '',
+  type = '',
+  group = '',
+  unit = '',
+  name = '',
+  mfr = '',
+  options = { names: [], manufacturers: [] },
+  compact = false,
+}) {
   return (
     <form action="/search" method="get" className={compact ? 'card p-4' : ''}>
       <div className="flex flex-col gap-3 md:flex-row">
@@ -39,6 +48,26 @@ export default function SearchForm({ q = '', type = '', group = '', unit = '', c
           ค้นหา
         </button>
       </div>
+      {compact && (
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <select name="name" defaultValue={name} className="input min-w-0" aria-label="ชื่อยา">
+            <option value="">ทุกชื่อยา ({options.names.length.toLocaleString('th-TH')})</option>
+            {options.names.map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
+          </select>
+          <select name="mfr" defaultValue={mfr} className="input min-w-0" aria-label="ผู้ผลิต">
+            <option value="">ทุกผู้ผลิต ({options.manufacturers.length.toLocaleString('th-TH')})</option>
+            {options.manufacturers.map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </form>
   );
 }

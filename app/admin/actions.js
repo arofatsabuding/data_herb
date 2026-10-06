@@ -1,6 +1,7 @@
 'use server';
 
 import path from 'path';
+import { isAdmin } from '@/lib/admin-auth';
 import { checkCode } from '@/lib/confirm-code';
 import { rebuildReferences } from '@/lib/scheduler';
 import refs from '@/scripts/reference-files';
@@ -10,6 +11,7 @@ const MAX_SIZE = 50 * 1024 * 1024;
 // อัปโหลดไฟล์อ้างอิงใหม่แทนไฟล์เดิม → ตรวจรูปแบบไฟล์ก่อน แล้วสร้างฐานข้อมูลใหม่เบื้องหลัง
 // ต้องกรอกรหัสผู้ดูแล (ADMIN_CODE ใน .env — ถ้าไม่ได้ตั้ง ใช้ FETCH_NOW_CODE)
 export async function uploadReference(prevState, formData) {
+  if (!(await isAdmin())) return { error: 'หมดเวลาเข้าหน้าผู้ดูแล — กรุณารีเฟรชหน้าแล้วกรอกรหัสใหม่' };
   const ref = refs.getRef(String(formData.get('key') || ''));
   if (!ref) return { error: 'ไม่รู้จักไฟล์ที่เลือก' };
   const file = formData.get('file');

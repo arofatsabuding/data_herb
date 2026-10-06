@@ -1,4 +1,6 @@
 import AdminFiles from '@/components/AdminFiles';
+import { AdminLoginForm } from '@/components/AdminLogin';
+import { isAdmin } from '@/lib/admin-auth';
 import { referenceStatus } from '@/lib/scheduler';
 import refs from '@/scripts/reference-files';
 import { uploadReference } from './actions';
@@ -10,7 +12,20 @@ export const metadata = { title: 'ผู้ดูแล — Data Herb' };
 const when = (t) =>
   new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }) + ' น.';
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  // เข้าตรงด้วย URL โดยยังไม่ได้กรอกรหัส → แสดงช่องกรอกรหัสก่อน
+  if (!(await isAdmin())) {
+    return (
+      <div className="mx-auto max-w-sm px-4 py-16">
+        <div className="card p-6">
+          <h1 className="mb-1 text-lg font-bold text-gray-800">เข้าสู่หน้าผู้ดูแล</h1>
+          <p className="mb-4 text-sm text-gray-600">กรุณากรอกรหัสผู้ดูแล</p>
+          <AdminLoginForm />
+        </div>
+      </div>
+    );
+  }
+
   const status = referenceStatus();
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
