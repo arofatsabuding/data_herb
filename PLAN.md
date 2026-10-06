@@ -13,7 +13,8 @@
 - รวม sheet เดี่ยว + ตำรับ → 1 แถวต่อรหัส 24 หลัก (มี TTMTID ทุกแถว)
 - จับคู่ TTMTID ↔ `TTMTCode` ใน Master
 - ถ้า TTMTID ไม่อยู่ใน Master **หรือ** อยู่แต่ช่อง Drug_Group_Nhso ว่าง → แสดง **"ไม่มี Drug Group"**
-- ผลเบื้องต้น: มี Drug Group ≈ 5,339 รายการ จาก 44,541
+- ผล import จริง: ทั้งหมด 44,541 รายการ · พบใน Master 9,347 · มี Drug Group 5,339 · ไม่มี Drug Group 39,202
+- **รหัส 24 หลักไม่ unique**: มี 383 รหัสที่ซ้ำกัน (848 แถว) โดยแต่ละแถวมี TTMTID ต่างกัน (เช่น ขนาดบรรจุต่างกัน) → เก็บ 1 แถวต่อ 1 แถวใน Excel และใช้ TTMTID เป็นตัวหลักในการเชื่อม
 
 ## 2. เทคโนโลยี
 
@@ -25,7 +26,7 @@
 
 ### ตาราง
 
-- `drug_codes` — code24 (PK), ttmtid, drug_type (เดี่ยว/ตำรับ), ชื่อยา, ชื่อการค้า, สรรพคุณ, ความแรง, รูปแบบยา, ผู้ผลิต, เลขทะเบียน, รหัสทำงาน, ครั้งที่กำหนด, ขนาดบรรจุ
+- `drug_codes` — id (PK), code24, ttmtid, drug_type (เดี่ยว/ตำรับ), ชื่อยา, ชื่อการค้า, สรรพคุณ, ความแรง, รูปแบบยา, ผู้ผลิต, เลขทะเบียน, รหัสทำงาน, ครั้งที่กำหนด, ขนาดบรรจุ
 - `ttmt_master` — ttmt_code (PK), active_ingredient, strength, dosage_form, trade_name, manufacturer, fsn, ttmt_type, ed, drug_group_nhso
 - View `drug_lookup` = `drug_codes LEFT JOIN ttmt_master` + คอลัมน์ `has_drug_group`
 - `meta` — วันที่ import, ชื่อไฟล์ต้นทาง
@@ -63,8 +64,8 @@
 
 | # | งาน | สถานะ |
 |---|---|---|
-| 1 | ติดตั้ง gh, ตั้งโปรเจกต์ Next.js (JS) + git | กำลังทำ |
-| 2 | Import script + SQLite | |
+| 1 | ติดตั้ง gh, ตั้งโปรเจกต์ Next.js (JS) + git | ✅ |
+| 2 | Import script + SQLite | ✅ |
 | 3 | หน้าค้นหา / รายละเอียด / สรุป / export | |
 | 4 | REST API + OpenAPI | |
 | 5 | Chatbot + ปุ่มแชท | |
