@@ -6,10 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "import": "node scripts/import.js"
   },
   "dependencies": {
+    "@fontsource/sarabun": "^5.3.0",
     "better-sqlite3": "^11.10.0",
     "next": "^15.5.27",
     "react": "^19.3.0",
@@ -17,6 +18,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
     "autoprefixer": "^10.6.1",
     "eslint": "^9.39.5",
     "eslint-config-next": "^15.5.27",

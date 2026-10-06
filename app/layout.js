@@ -1,0 +1,24 @@
+import '@fontsource/sarabun/300.css';
+import '@fontsource/sarabun/400.css';
+import '@fontsource/sarabun/600.css';
+import '@fontsource/sarabun/700.css';
+import './globals.css';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+
+export const metadata = {
+  title: 'Data Herb — ค้นหารหัสยาสมุนไพร',
+  description: 'รวมรหัสยาแผนไทย 24 หลัก (กรมการแพทย์แผนไทยฯ) กับ TTMT Master (สมสท.) และ Drug Group',
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="th">
+      <body className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </body>
+    </html>
+  );
+}

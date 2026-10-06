@@ -6,8 +6,8 @@
 
 | ไฟล์ | ที่มา | ใช้ sheet | แถว |
 |---|---|---|---|
-| `ไฟล์/รหัสยา24หลักทั้งหมด.xlsx` | กรมการแพทย์แผนไทยฯ | เดี่ยว, ตำรับ (**ไม่ใช้ sheet ยกเลิก**) | 11,482 + 33,059 |
-| `ไฟล์/MasterTTMT_THIS_20260715.xls` | สมสท. | l_ttmt_master_ed (ถือเป็นฉบับสมบูรณ์) | 9,470 |
+| `publicfiles/รหัสยา24หลักทั้งหมด.xlsx` | กรมการแพทย์แผนไทยฯ | เดี่ยว, ตำรับ (**ไม่ใช้ sheet ยกเลิก**) | 11,482 + 33,059 |
+| `publicfiles/MasterTTMT_THIS_20260715.xls` | สมสท. | l_ttmt_master_ed (ถือเป็นฉบับสมบูรณ์) | 9,470 |
 
 กติกาการรวม:
 - รวม sheet เดี่ยว + ตำรับ → 1 แถวต่อรหัส 24 หลัก (มี TTMTID ทุกแถว)
@@ -58,7 +58,7 @@
 - repo **data_herb** (private), branch `main` + ทำงานผ่าน PR
 - GitHub Actions: lint + build
 - `.env.example` (ANTHROPIC_API_KEY, AGENT_API_KEYS) — ห้าม commit secrets
-- commit ไฟล์ Excel ต้นทางใน `ไฟล์/` (ไม่ commit `data/herb.db` — สร้างด้วย `npm run import`)
+- commit ไฟล์ Excel ต้นทางใน `publicfiles/` (ไม่ commit `data/herb.db` — สร้างด้วย `npm run import`)
 
 ## 7. ลำดับงาน
 
@@ -66,9 +66,9 @@
 |---|---|---|
 | 1 | ติดตั้ง gh, ตั้งโปรเจกต์ Next.js (JS) + git | ✅ |
 | 2 | Import script + SQLite | ✅ |
-| 3 | หน้าค้นหา / รายละเอียด / สรุป / export | |
+| 3 | หน้าค้นหา / รายละเอียด / Drug Group / สรุป / export | ✅ |
 | 4 | REST API + OpenAPI | |
 | 5 | Chatbot + ปุ่มแชท | |
 | 6 | MCP server + API key | |
-| 7 | push GitHub (รอ `gh auth login`) + CI | |
+| 7 | push GitHub ✅ + CI | |
 | 8 | คู่มือ deploy บน server หน่วยงาน | |

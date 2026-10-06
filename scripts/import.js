@@ -1,4 +1,4 @@
-// อ่านไฟล์ Excel ในโฟลเดอร์ ไฟล์/ แล้วสร้างฐานข้อมูล SQLite ใหม่ที่ data/herb.db
+// อ่านไฟล์ Excel ในโฟลเดอร์ publicfiles/ แล้วสร้างฐานข้อมูล SQLite ใหม่ที่ data/herb.db
 // ใช้งาน: npm run import
 const path = require('path');
 const fs = require('fs');
@@ -6,12 +6,12 @@ const XLSX = require('xlsx');
 const Database = require('better-sqlite3');
 
 const ROOT = path.join(__dirname, '..');
-const SRC_DIR = path.join(ROOT, 'ไฟล์');
+const SRC_DIR = path.join(ROOT, 'publicfiles');
 const DB_PATH = path.join(ROOT, 'data', 'herb.db');
 
 const CODES_FILE = path.join(SRC_DIR, 'รหัสยา24หลักทั้งหมด.xlsx');
 const MASTER_FILE = fs.readdirSync(SRC_DIR).find((f) => /^MasterTTMT.*\.xlsx?$/i.test(f));
-if (!MASTER_FILE) throw new Error('ไม่พบไฟล์ MasterTTMT*.xls ในโฟลเดอร์ ไฟล์/');
+if (!MASTER_FILE) throw new Error('ไม่พบไฟล์ MasterTTMT*.xls ในโฟลเดอร์ publicfiles/');
 
 // ล้างช่องว่าง/ขึ้นบรรทัด และแปลงทุกค่าเป็นข้อความ (กันเลข 0 นำหน้าหาย)
 const clean = (v) => {
