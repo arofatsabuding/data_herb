@@ -1,6 +1,6 @@
 // ดึงข้อมูล s_ttm4 จาก opendata.moph.go.th ทุกจังหวัด แล้วบันทึกเป็น Excel รายวันใน publicfiles/opendata-2570/
 // ชื่อไฟล์: Data_<ปีที่บันทึก>_sttm4_<จำนวนแถว>_<dd-mm-yy พ.ศ.>.xlsx  (รูปแบบเดียวกับ Data_2569_sttm4_195692_08-09-69.xlsx)
-// จากนั้นนำเข้า data/kpi.db (ถ้าตั้งค่าให้ใช้ไฟล์ล่าสุด)
+// จากนั้นนำเข้า data/kpi.db เป็น dataset ใหม่
 //
 // ใช้งาน: npm run fetch:opendata
 // ตั้งค่า (env):
@@ -12,8 +12,8 @@ const path = require('path');
 const XLSX = require('xlsx');
 const kpi = require('./kpi-lib');
 
-const API_URL = 'https://opendata.moph.go.th/api/report_data';
-const SAVE_YEAR = kpi.COMPARE_YEAR;
+const API_URL = process.env.OPENDATA_API_URL || 'https://opendata.moph.go.th/api/report_data';
+const SAVE_YEAR = kpi.FETCH_YEAR_TARGET;
 const FETCH_YEAR_SETTING = (process.env.OPENDATA_FETCH_YEAR || 'auto').trim();
 const FALLBACK_YEAR = (process.env.OPENDATA_FALLBACK_YEAR || '2569').trim();
 let FETCH_YEAR = String(SAVE_YEAR);
@@ -176,13 +176,13 @@ function thaiDateStamp(date = new Date()) {
 }
 
 function writeExcel(rows) {
-  fs.mkdirSync(kpi.OPENDATA_DIR, { recursive: true });
+  fs.mkdirSync(kpi.yearDir(SAVE_YEAR), { recursive: true });
   const stamp = thaiDateStamp();
   // ลบไฟล์ของวันเดียวกันที่ดึงไว้ก่อนหน้า (ถ้ารันซ้ำในวันเดียวกัน)
-  for (const f of fs.readdirSync(kpi.OPENDATA_DIR)) {
-    if (new RegExp(`^Data_${SAVE_YEAR}_sttm4_\\d+_${stamp}\\.xlsx$`).test(f)) fs.unlinkSync(path.join(kpi.OPENDATA_DIR, f));
+  for (const f of fs.readdirSync(kpi.yearDir(SAVE_YEAR))) {
+    if (new RegExp(`^Data_${SAVE_YEAR}_sttm4_\\d+_${stamp}\\.xlsx$`).test(f)) fs.unlinkSync(path.join(kpi.yearDir(SAVE_YEAR), f));
   }
-  const file = path.join(kpi.OPENDATA_DIR, `Data_${SAVE_YEAR}_sttm4_${rows.length}_${stamp}.xlsx`);
+  const file = path.join(kpi.yearDir(SAVE_YEAR), `Data_${SAVE_YEAR}_sttm4_${rows.length}_${stamp}.xlsx`);
   const sheet = XLSX.utils.json_to_sheet(
     rows.map((r) => Object.fromEntries(kpi.DATA_COLUMNS.map((c) => [c, r[c] ?? null]))),
     { header: kpi.DATA_COLUMNS }
@@ -236,19 +236,18 @@ async function main() {
 
   const file = writeExcel(rows);
   log(`บันทึก ${path.relative(kpi.ROOT, file)} (${rows.length} แถว)`);
-  kpi.recordManifest(path.basename(file), { fetchYear: Number(FETCH_YEAR), rows: rows.length, fetchedAt: new Date().toISOString() });
+  kpi.recordManifest(SAVE_YEAR, path.basename(file), {
+    fetchYear: Number(FETCH_YEAR),
+    rows: rows.length,
+    fetchedAt: new Date().toISOString(),
+  });
 
-  // นำเข้า kpi.db ตามการตั้งค่า: "ใช้ไฟล์ล่าสุด" → ไฟล์นี้ / เลือกไฟล์ไว้ → คงไฟล์เดิม
+  // นำเข้าเป็น dataset ใหม่ (ผู้ใช้ที่ตั้งค่า "ใช้ไฟล์ล่าสุด" จะเห็นข้อมูลนี้ทันที)
   const db = kpi.openKpiDb();
   kpi.importReferences(db);
-  const target = kpi.resolveCompareFile();
-  if (target && path.basename(target) === path.basename(file)) {
-    const s = kpi.importYearRows(db, SAVE_YEAR, rows, path.basename(file));
-    log(`นำเข้า kpi.db ปี ${SAVE_YEAR}: ${s.hosp} หน่วยบริการ · มูลค่า ${Math.round(s.kpi).toLocaleString()} บาท`);
-  } else {
-    log(`การตั้งค่าเลือกไฟล์ ${target ? path.basename(target) : '-'} ไว้ — ไม่เปลี่ยนข้อมูลที่ใช้เปรียบเทียบ`);
-    kpi.syncCompareYear(db, { log });
-  }
+  const s = kpi.importDatasetRows(db, SAVE_YEAR, rows, path.basename(file));
+  log(`นำเข้า kpi.db ปี ${SAVE_YEAR}: ${s.hosp} หน่วยบริการ · มูลค่า ${Math.round(s.kpi).toLocaleString()} บาท`);
+  kpi.pruneDatasets(db, log);
   db.close();
   log(`เสร็จสิ้น (ใช้เวลา ${Math.round((Date.now() - started) / 1000)} วินาที)`);
 }

@@ -1,18 +1,24 @@
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import KpiFilter from '@/components/KpiFilter';
 import {
   DEFAULT_HOSPCODE,
   EXCLUDED_ZONES,
   KPI_NAME,
+  NOT_IN_GROUP,
+  PREF_COOKIE,
   VIEWS,
   getAreaOptions,
   getCompareReport,
-  getKpiYears,
   getOfficeTypes,
   kpiAvailable,
   parseKpiQuery,
+  parsePrefs,
   pctChange,
+  resolveSets,
+  sumByYear,
 } from '@/lib/kpi';
+import { ensureImported } from '@/lib/scheduler';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,15 +95,19 @@ function EmptyState() {
 export default async function KpiPage({ searchParams }) {
   if (!kpiAvailable()) return <EmptyState />;
   const sp = await searchParams;
-  const files = getKpiYears();
-  if (!files.length) return <EmptyState />;
+  // ไฟล์ของแต่ละปีตามที่ผู้ใช้คนนี้เลือกไว้ (cookie) — ค่าเริ่มต้น = ไฟล์ล่าสุด
+  const prefs = parsePrefs((await cookies()).get(PREF_COOKIE)?.value);
+  const sets = resolveSets(prefs);
+  if (!sets.length) return <EmptyState />;
+  // ไฟล์ที่เลือกแต่ยังไม่ได้นำเข้า → สั่งนำเข้าเบื้องหลัง ระหว่างนี้ใช้ไฟล์ล่าสุดที่มี
+  for (const s of sets) if (s.pending) ensureImported(s.year, s.pending);
 
   // เทียบ 2 ปีล่าสุดที่มีข้อมูล (เช่น 2569 → 2570)
-  const years = files.slice(-2).map((f) => f.year);
+  const years = sets.map((s) => s.year);
   const [prevYear, curYear] = years.length === 2 ? years : [null, years[0]];
 
   const { q, missing } = parseKpiQuery(sp);
-  const report = missing ? null : getCompareReport(q, years);
+  const report = missing ? null : getCompareReport(q, sets);
   const options = getAreaOptions();
   const types = getOfficeTypes();
 
@@ -158,11 +168,25 @@ export default async function KpiPage({ searchParams }) {
       </section>
 
       <div className="mx-auto max-w-7xl px-4 py-8">
-        <div className="mb-3 flex justify-end">
-          <Link href="/kpi/settings" className="text-sm text-emerald-700 hover:underline">
-            ⚙ ตั้งค่าไฟล์ข้อมูลปี {curYear}
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+          <div className="flex flex-wrap gap-2 text-gray-600">
+            {sets.map((s) => (
+              <span key={s.year} className="rounded-xl bg-white px-3 py-1 shadow-sm">
+                ปี {s.year}: <span className="mono text-xs">{s.file}</span>
+                {s.choice === 'latest' && <span className="ml-1 text-xs text-emerald-600">(ล่าสุด)</span>}
+              </span>
+            ))}
+          </div>
+          <Link href="/kpi/settings" className="text-emerald-700 hover:underline">
+            ⚙ เลือกไฟล์ข้อมูลที่ใช้เปรียบเทียบ
           </Link>
         </div>
+        {sets.some((s) => s.pending) && (
+          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-800">
+            กำลังเตรียมไฟล์ที่เลือก ({sets.filter((s) => s.pending).map((s) => s.pending).join(', ')}) ประมาณ 1 นาที —
+            ระหว่างนี้แสดงผลจากไฟล์ที่แสดงด้านบนไปก่อน รีเฟรชหน้านี้ภายหลัง
+          </div>
+        )}
         <div className="mb-8">
           <KpiFilter
             key={JSON.stringify(q)}
@@ -255,7 +279,7 @@ export default async function KpiPage({ searchParams }) {
           <div className="mb-1 font-semibold text-emerald-800">วิธีคำนวณ</div>
           <ul className="list-inside list-disc space-y-1">
             <li>ล้างรหัส didstd ให้เหลือแต่ตัวเลข แล้วใช้ 11 หลักแรกหากลุ่มยาใน herbal_drug_master_11</li>
-            <li>มูลค่าตัวชี้วัด = จำนวนครั้ง UC (vs_uc) × ราคาต่อ course ของกลุ่มยา — รหัสที่ไม่อยู่ในกลุ่มคิดเป็น 0 บาท</li>
+            <li>มูลค่าตัวชี้วัด = จำนวนครั้ง UC (vs_uc) × ราคาต่อ course ของกลุ่มยา — {NOT_IN_GROUP} คิดเป็น 0 บาท</li>
             <li>ร้อยละการเปลี่ยนแปลง = (ปีหลัง − ปีก่อน) ÷ ปีก่อน × 100</li>
             <li>
               ไม่นำมาคำนวณ: หน่วยบริการในเขตสุขภาพที่ {EXCLUDED_ZONES.join(', ')} และหน่วยบริการที่ไม่พบเขตสุขภาพ
@@ -264,9 +288,9 @@ export default async function KpiPage({ searchParams }) {
               รหัส 24 หลักและรหัสที่มาของยา ตรวจกับไฟล์รหัสยาแผนไทย 24 หลัก (กรมการแพทย์แผนไทยฯ) —
               รหัสที่ไม่พบยังคิดมูลค่าตามกลุ่ม 11 หลักตามปกติ
             </li>
-            {files.slice(-2).map((f) => (
-              <li key={f.year}>
-                ปี {f.year}: {f.file} · {num(f.rows)} แถว · ข้อมูลล่าสุด {formatDateCom(f.max_date_com)}
+            {sets.map(({ year, dataset: f }) => (
+              <li key={year}>
+                ปี {year}: {f.file} · {num(f.rows)} แถว · ข้อมูลล่าสุด {formatDateCom(f.max_date_com)}
               </li>
             ))}
           </ul>
@@ -309,6 +333,7 @@ function ChildrenTable({ report, q, prevYear, curYear }) {
   const rows = [...report.children].sort((a, b) => val(b, curYear) - val(a, curYear) || val(b, prevYear) - val(a, prevYear));
   const max = Math.max(...rows.flatMap((c) => [val(c, curYear), val(c, prevYear)]), 0);
   const hospLevel = V.child === 'hosp';
+  const total = (y) => report.totals[y] || {};
   return (
     <section className="card overflow-hidden lg:col-span-2">
       <h2 className="border-b border-gray-100 px-6 py-4 text-lg font-bold text-gray-800">
@@ -368,9 +393,50 @@ function ChildrenTable({ report, q, prevYear, curYear }) {
               );
             })}
           </tbody>
+          <tfoot className="border-t-2 border-emerald-200 bg-emerald-50/70 font-bold text-gray-800">
+            <tr>
+              <td className="px-4 py-3" />
+              <td className="px-4 py-3">
+                รวมทั้งหมด
+                <div className="text-xs font-normal text-gray-500">
+                  {hospLevel ? `${num(rows.length)} หน่วยบริการ` : `${num(total(curYear).hosp_count ?? total(prevYear).hosp_count)} หน่วยบริการ`}
+                </div>
+              </td>
+              {prevYear && <td className="whitespace-nowrap px-4 py-3 text-right">{num(total(prevYear).kpi_value)}</td>}
+              <td className="whitespace-nowrap px-4 py-3 text-right text-emerald-700">{num(total(curYear).kpi_value)}</td>
+              {prevYear && (
+                <td className="px-4 py-3 text-right">
+                  <Change prev={total(prevYear).kpi_value} cur={total(curYear).kpi_value} />
+                </td>
+              )}
+            </tr>
+          </tfoot>
         </table>
       </div>
     </section>
+  );
+}
+
+// แถวรวมท้ายตารางยา (รวมเฉพาะแถวในตารางนั้น)
+function DrugTotalRow({ label, sums, prevYear, curYear, before, showChange = true, sticky = false }) {
+  const g = (y, f) => sums[y]?.[f] || 0;
+  return (
+    <tfoot className={`border-t-2 border-emerald-200 bg-emerald-50 font-bold text-gray-800 ${sticky ? 'sticky bottom-0' : ''}`}>
+      <tr>
+        <td className="px-4 py-3" colSpan={before}>
+          {label}
+        </td>
+        {prevYear && <td className="px-4 py-3 text-right">{num(g(prevYear, 'vs_uc'))}</td>}
+        <td className="px-4 py-3 text-right">{num(g(curYear, 'vs_uc'))}</td>
+        {prevYear && <td className="whitespace-nowrap px-4 py-3 text-right">{num(g(prevYear, 'kpi_value'))}</td>}
+        <td className="whitespace-nowrap px-4 py-3 text-right text-emerald-700">{num(g(curYear, 'kpi_value'))}</td>
+        {prevYear && showChange && (
+          <td className="px-4 py-3 text-right">
+            <Change prev={g(prevYear, 'kpi_value')} cur={g(curYear, 'kpi_value')} />
+          </td>
+        )}
+      </tr>
+    </tfoot>
   );
 }
 
@@ -459,7 +525,7 @@ function HospDrugs({ drugs, prevYear, curYear }) {
                   <td className="px-4 py-3">{d.drug_name || '-'}</td>
                   <td className="mono px-4 py-3 text-center">{d.source_code || '-'}</td>
                   <td className="px-4 py-3">
-                    <div className="font-semibold">{d.full_name || 'ไม่อยู่ในกลุ่มที่คิดตัวชี้วัด'}</div>
+                    <div className="font-semibold">{d.full_name || NOT_IN_GROUP}</div>
                     <div className="text-xs text-gray-500">
                       <span className="mono">{d.code11 || '-'}</span>
                       {!unmatched && ` · ${num(d.price)} บาท/course`}
@@ -478,6 +544,13 @@ function HospDrugs({ drugs, prevYear, curYear }) {
               );
             })}
           </tbody>
+          <DrugTotalRow
+            label={`รวม (${num(rows.length)} รหัส)`}
+            sums={sumByYear(rows, ['vs_uc', 'kpi_value'])}
+            prevYear={prevYear}
+            curYear={curYear}
+            before={4}
+          />
         </table>
       </div>
     </section>
@@ -531,7 +604,7 @@ function NotFound24({ items, q, prevYear, curYear }) {
                     <Code24 d={d} />
                   </td>
                   <td className="px-4 py-2">
-                    {d.price === null ? <span className="text-gray-400">ไม่อยู่ในกลุ่มที่คิดตัวชี้วัด</span> : d.full_name}
+                    {d.price === null ? <span className="text-gray-400">{NOT_IN_GROUP}</span> : d.full_name}
                     <div className="mono text-xs text-gray-500">{d.code11 || '-'}</div>
                   </td>
                   {!isHosp && (
@@ -546,6 +619,15 @@ function NotFound24({ items, q, prevYear, curYear }) {
                 </tr>
               ))}
             </tbody>
+            <DrugTotalRow
+              label={`รวมทั้งหมด (${num(total)} รหัส)`}
+              sums={items.sums || sumByYear(items, ['vs_uc', 'kpi_value'])}
+              prevYear={prevYear}
+              curYear={curYear}
+              before={isHosp ? 3 : 4}
+              showChange={false}
+              sticky
+            />
           </table>
         </div>
       )}
