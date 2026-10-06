@@ -29,7 +29,7 @@ import { checkFetch, fetchNow, selectFile } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'ติดตามตัวชี้วัด — Data Herb' };
+export const metadata = { title: 'ตัวชี้วัด — Data Herb' };
 
 const num = (n) => Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 0 });
 const million = (n) => (Number(n || 0) / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 2 });
@@ -151,7 +151,7 @@ export default async function KpiPage({ searchParams }) {
         <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-emerald-500/20 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-4 py-10 md:py-14">
           <span className="badge mb-4 border border-emerald-500/30 bg-emerald-500/20 px-4 py-1 text-sm text-emerald-300">
-            ติดตามตัวชี้วัด · {VIEWS[q.view].label}
+            ตัวชี้วัด · {VIEWS[q.view].label}
             {prevYear ? ` · เทียบปีงบประมาณ ${prevYear} กับ ${curYear}` : ` · ปีงบประมาณ ${curYear}`}
           </span>
           <h1 className="mb-1 text-3xl font-bold text-white md:text-4xl">{KPI_NAME}</h1>

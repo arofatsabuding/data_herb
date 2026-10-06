@@ -193,7 +193,7 @@ export default function KpiSummary({ sets }) {
       </div>
 
       <p className="mt-3 text-xs text-gray-500">
-        ไฟล์ข้อมูลที่ใช้ (ตามที่เลือกไว้ในหน้าติดตามตัวชี้วัด):{' '}
+        ไฟล์ข้อมูลที่ใช้ (ตามที่เลือกไว้ในหน้าตัวชี้วัด):{' '}
         {sets.map((s) => `ปี ${s.year}: ${s.file}`).join(' · ')}
       </p>
     </section>

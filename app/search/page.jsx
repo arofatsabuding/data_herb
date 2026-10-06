@@ -6,7 +6,7 @@ import { listFilterOptions, searchDrugs } from '@/lib/drugs';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'ค้นหายา — Data Herb' };
+export const metadata = { title: 'ข้อมูลยา — Data Herb' };
 
 export default async function SearchPage({ searchParams }) {
   const sp = await searchParams;
@@ -27,7 +27,7 @@ export default async function SearchPage({ searchParams }) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold text-gray-800">ค้นหายาสมุนไพร</h1>
+      <h1 className="mb-6 text-2xl font-bold text-gray-800">ข้อมูลยาสมุนไพร</h1>
       <SearchForm
         q={q}
         type={type}

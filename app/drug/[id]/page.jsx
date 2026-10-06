@@ -34,7 +34,7 @@ export default async function DrugPage({ params }) {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Link href="/search" className="inline-flex items-center gap-2 text-sm text-emerald-700 hover:underline">
           <ArrowLeftIcon className="h-4 w-4" />
-          กลับไปหน้าค้นหา
+          กลับไปหน้าข้อมูลยา
         </Link>
         <ExcelButton
           filename={`drug_${drug.code24}`}

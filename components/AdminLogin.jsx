@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { adminLogin } from '@/app/admin/login-action';
 
@@ -40,8 +41,9 @@ export function AdminLoginForm({ onCancel }) {
 
 // เมนู "ผู้ดูแลระบบ" ในแถบด้านบน — กดแล้วเด้งหน้าต่างให้กรอกรหัสก่อน
 // (portal ไปที่ body เพราะ header ใช้ backdrop-blur ทำให้ fixed ไม่เต็มจอ)
-export function AdminNavButton({ className }) {
+export function AdminNavButton({ className, activeClassName }) {
   const [open, setOpen] = useState(false);
+  const onAdmin = usePathname()?.startsWith('/admin');
 
   useEffect(() => {
     if (!open) return;
@@ -52,7 +54,12 @@ export function AdminNavButton({ className }) {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={className}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-current={onAdmin ? 'page' : undefined}
+        className={onAdmin && activeClassName ? activeClassName : className}
+      >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
           <rect x="4" y="11" width="16" height="10" rx="2" />
           <path d="M8 11V7a4 4 0 0 1 8 0v4" />
