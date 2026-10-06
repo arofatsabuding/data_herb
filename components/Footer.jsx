@@ -37,7 +37,10 @@ export default function Footer() {
         </div>
       </div>
       <div className="border-t border-white/10 py-4 text-center text-xs text-gray-500">
-        © {new Date().getFullYear()} Data Herb
+        © {new Date().getFullYear()} Data Herb ·{' '}
+        <a href="/api-docs" className="text-emerald-400 hover:text-emerald-300">
+          API / MCP สำหรับ AI
+        </a>
       </div>
     </footer>
   );

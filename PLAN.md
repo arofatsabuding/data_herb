@@ -53,7 +53,8 @@
 - **AI agent ภายนอก:**
   - REST API `GET /api/v1/drugs?q=`, `/api/v1/drugs/{code24}`, `/api/v1/ttmt/{ttmtid}`, `/api/v1/drug-groups`, `/api/v1/stats` + `/api/v1/openapi.json`
   - MCP server `/api/mcp` ใช้ tools ชุดเดียวกับ chatbot
-  - API key สำหรับ agent (หน้าเว็บสาธารณะไม่ต้อง login)
+  - ไม่ใช้ API key — ข้อมูลยาและตัวชี้วัดเปิดให้ทุกคนอ่าน (ตัดสินใจ 2026-10-06)
+  - เครื่องมือ KPI: `kpi_report`, `kpi_find_area`, `kpi_datasets`
 
 ## 6. GitHub
 
@@ -70,8 +71,8 @@
 | 2 | Import script + SQLite | ✅ |
 | 3 | หน้าค้นหา / รายละเอียด / Drug Group / สรุป / export | ✅ |
 | 3.1 | เมนูติดตามตัวชี้วัด (มูลค่ายาสมุนไพรในสิทธิ UC) + ดึง opendata ทุกวัน 22:00 | ✅ |
-| 4 | REST API + OpenAPI | |
+| 4 | REST API + OpenAPI (`/api/v1`, `/api/v1/openapi.json`, `/llms.txt`, `/api-docs`) — รวมตัวชี้วัด KPI, เปิดให้ทุกคนอ่าน | ✅ |
 | 5 | Chatbot + ปุ่มแชท | |
-| 6 | MCP server + API key | |
+| 6 | MCP server `/api/mcp` (stateless, ไม่ใช้ key ตามที่ตกลง) | ✅ |
 | 7 | push GitHub ✅ + CI | |
 | 8 | คู่มือ deploy บน server หน่วยงาน | |
