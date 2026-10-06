@@ -20,8 +20,8 @@ npm run dev      # เปิด http://localhost:3000
 | คำสั่ง | ใช้ทำอะไร |
 |---|---|
 | `npm run import` | สร้างฐานข้อมูล SQLite ใหม่จากไฟล์ Excel |
-| `npm run dev` | รันโหมดพัฒนา |
-| `npm run build` / `npm start` | build และรันสำหรับใช้งานจริง |
+| `npm run dev` | รันโหมดพัฒนา (http://localhost:3000) |
+| `npm run build` / `npm start` | build และรันสำหรับใช้งานจริง (http://localhost:4000) |
 | `npm run lint` | ตรวจโค้ด |
 
 ## อัปเดตข้อมูลรอบใหม่
@@ -35,7 +35,7 @@ npm run dev      # เปิด http://localhost:3000
 
 ```
 app/                หน้าเว็บ (Next.js App Router)
-  page.js           หน้าแรก
+  page.jsx          หน้าแรก
   search/           ค้นหา + ตัวกรอง + แบ่งหน้า
   drug/[id]/        รายละเอียดยา
   groups/           รายการ Drug Group
