@@ -69,6 +69,7 @@
 | 1 | ติดตั้ง gh, ตั้งโปรเจกต์ Next.js (JS) + git | ✅ |
 | 2 | Import script + SQLite | ✅ |
 | 3 | หน้าค้นหา / รายละเอียด / Drug Group / สรุป / export | ✅ |
+| 3.1 | เมนูติดตามตัวชี้วัด (มูลค่ายาสมุนไพรในสิทธิ UC) + ดึง opendata ทุกวัน 22:00 | ✅ |
 | 4 | REST API + OpenAPI | |
 | 5 | Chatbot + ปุ่มแชท | |
 | 6 | MCP server + API key | |

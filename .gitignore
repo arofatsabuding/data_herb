@@ -8,3 +8,5 @@ data/*.tmp
 .env*.local
 ~$*
 *.log
+publicfiles/opendata-2570/*.xlsx
+logs/

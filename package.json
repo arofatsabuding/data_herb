@@ -7,12 +7,15 @@
     "build": "next build",
     "start": "next start -p 4000",
     "lint": "eslint .",
-    "import": "node scripts/import.js"
+    "import": "node scripts/import.js",
+    "import:kpi": "node --max-old-space-size=4096 scripts/import-kpi.js",
+    "fetch:opendata": "node --max-old-space-size=4096 scripts/fetch-opendata.js"
   },
   "dependencies": {
     "@fontsource/sarabun": "^5.3.0",
     "better-sqlite3": "^11.10.0",
     "next": "^15.5.27",
+    "node-cron": "^3.0.3",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "xlsx": "^0.18.5"
