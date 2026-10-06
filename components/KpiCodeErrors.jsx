@@ -44,10 +44,13 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
   );
 
   return (
-    <section className="card mt-6 overflow-hidden">
-      <div className="border-b border-gray-100 px-6 py-4">
-        <h2 className="text-lg font-bold text-gray-800">{title}</h2>
-        <p className="text-xs text-gray-500">
+    <section className="card mt-6 overflow-hidden border border-rose-200">
+      <div className="border-b border-rose-100 bg-gradient-to-r from-rose-50 to-red-50 px-6 py-4">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-rose-900">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-sm text-white">!</span>
+          {title}
+        </h2>
+        <p className="text-xs text-rose-800/80">
           รหัสยาที่ผิดพลาด = รหัสที่หน่วยบริการส่งมา (หลังล้างอักขระ) ไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก
           รวมรหัสที่ว่างหรือไม่ครบหลัก · ร้อยละ = ผิดพลาด ÷ ทั้งหมด × 100
         </p>
@@ -57,7 +60,7 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
         {years.map((y) => {
           const r = rate(T(y).bad_rows, T(y).rows);
           return (
-            <div key={y} className={`rounded-2xl border p-4 ${y === curYear ? 'border-rose-200 bg-rose-50/50' : 'border-gray-100 bg-gray-50'}`}>
+            <div key={y} className={`rounded-2xl border p-4 ${y === curYear ? 'border-rose-300 bg-rose-50' : 'border-rose-100 bg-rose-50/30'}`}>
               <div className="text-sm text-gray-500">ปี {y} · นับตามรายการยา</div>
               <div className={`text-3xl font-bold ${y === curYear ? 'text-rose-600' : 'text-gray-700'}`}>{pct(r)}</div>
               <div className="mt-1 text-sm text-gray-600">
@@ -73,9 +76,9 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
         })}
       </div>
 
-      <div className="overflow-x-auto border-t border-gray-100">
+      <div className="overflow-x-auto border-t border-rose-100">
         <table className="w-full text-sm">
-          <thead className="bg-gradient-to-r from-emerald-50 to-teal-50 text-left text-emerald-900">
+          <thead className="bg-gradient-to-r from-rose-100 to-red-50 text-left text-rose-900">
             <tr>
               <th className="px-4 py-3 font-semibold">นับตาม</th>
               {years.map((y) => (
@@ -91,7 +94,7 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
               {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">เปลี่ยนแปลง</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-rose-50">
             {MEASURES.map((m) => (
               <tr key={m.total}>
                 <td className="px-4 py-3 font-semibold text-gray-700">{m.label}</td>
@@ -117,9 +120,9 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
       </div>
 
       {children.length > 0 && (
-        <div className="max-h-[32rem] overflow-auto border-t border-gray-100">
+        <div className="max-h-[32rem] overflow-auto border-t border-rose-100">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-gray-50 text-left text-gray-700">
+            <thead className="sticky top-0 bg-rose-50 text-left text-rose-900">
               <tr>
                 <th className="px-4 py-3 font-semibold">#</th>
                 <th className="px-4 py-3 font-semibold">{childLabel} (นับตามรายการยา)</th>
@@ -131,15 +134,15 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
                 {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">เปลี่ยนแปลง</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-rose-50">
               {children.map((c, i) => {
                 const href = childHref?.(c.key);
                 return (
-                  <tr key={c.key || '-'} className="hover:bg-emerald-50/40">
+                  <tr key={c.key || '-'} className="hover:bg-rose-50/60">
                     <td className="px-4 py-2 text-gray-400">{i + 1}</td>
                     <td className="px-4 py-2">
                       {href ? (
-                        <Link href={href} className="font-semibold text-gray-800 hover:text-emerald-600">
+                        <Link href={href} className="font-semibold text-gray-800 hover:text-rose-600">
                           {c.label}
                         </Link>
                       ) : (
@@ -164,7 +167,7 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
                 );
               })}
             </tbody>
-            <tfoot className="sticky bottom-0 border-t-2 border-emerald-200 bg-emerald-50 font-bold text-gray-800">
+            <tfoot className="sticky bottom-0 border-t-2 border-rose-200 bg-rose-50 font-bold text-rose-900">
               <tr>
                 <td className="px-4 py-3" colSpan={2}>
                   รวมทั้งหมด

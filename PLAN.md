@@ -72,7 +72,7 @@
 | 3 | หน้าค้นหา / รายละเอียด / Drug Group / สรุป / export | ✅ |
 | 3.1 | เมนูติดตามตัวชี้วัด (มูลค่ายาสมุนไพรในสิทธิ UC) + ดึง opendata ทุกวัน 22:00 | ✅ |
 | 4 | REST API + OpenAPI (`/api/v1`, `/api/v1/openapi.json`, `/llms.txt`, `/api-docs`) — รวมตัวชี้วัด KPI, เปิดให้ทุกคนอ่าน | ✅ |
-| 5 | Chatbot + ปุ่มแชท | |
+| 5 | Chatbot `/api/chat` + ปุ่ม "ถาม AI" (Claude Opus 5.5, ใช้เครื่องมือชุดเดียวกับ MCP, จำกัด 20 ข้อความ/IP/ชม. และ 500/วัน) | ✅ |
 | 6 | MCP server `/api/mcp` (stateless, ไม่ใช้ key ตามที่ตกลง) | ✅ |
 | 7 | push GitHub ✅ + CI | |
 | 8 | คู่มือ deploy บน server หน่วยงาน | |

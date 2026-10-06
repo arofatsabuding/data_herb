@@ -53,7 +53,7 @@ export default function NavProgress() {
     <>
       <div className="nav-progress" role="progressbar" aria-label="กำลังโหลด" />
       <div
-        className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-emerald-700 shadow-lg shadow-emerald-900/10 ring-1 ring-emerald-100"
+        className="fixed bottom-5 left-5 z-50 flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-emerald-700 shadow-lg shadow-emerald-900/10 ring-1 ring-emerald-100"
         aria-live="polite"
       >
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-600" />
