@@ -1,6 +1,7 @@
+import ComboBox from './ComboBox';
 import { SearchIcon } from './Icons';
 
-// ฟอร์มค้นหาแบบ GET ธรรมดา — ทำงานได้แม้ปิด JavaScript
+// ฟอร์มค้นหาแบบ GET ธรรมดา — ชื่อยา/ผู้ผลิต/รหัสที่มาของยา พิมพ์เพื่อกรองรายการได้ (ComboBox)
 export default function SearchForm({
   q = '',
   type = '',
@@ -51,30 +52,27 @@ export default function SearchForm({
       </div>
       {compact && (
         <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_14rem]">
-          <select name="name" defaultValue={name} className="input min-w-0" aria-label="ชื่อยา">
-            <option value="">ทุกชื่อยา ({options.names.length.toLocaleString('th-TH')})</option>
-            {options.names.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <select name="mfr" defaultValue={mfr} className="input min-w-0" aria-label="ผู้ผลิต">
-            <option value="">ทุกผู้ผลิต ({options.manufacturers.length.toLocaleString('th-TH')})</option>
-            {options.manufacturers.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <select name="src" defaultValue={src} className="input min-w-0" aria-label="รหัสที่มาของยา">
-            <option value="">ทุกรหัสที่มาของยา ({options.sources.length.toLocaleString('th-TH')})</option>
-            {options.sources.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
+          <ComboBox
+            name="name"
+            defaultValue={name}
+            options={options.names}
+            allLabel={`ทุกชื่อยา (${options.names.length.toLocaleString('th-TH')})`}
+            aria-label="ชื่อยา"
+          />
+          <ComboBox
+            name="mfr"
+            defaultValue={mfr}
+            options={options.manufacturers}
+            allLabel={`ทุกผู้ผลิต (${options.manufacturers.length.toLocaleString('th-TH')})`}
+            aria-label="ผู้ผลิต"
+          />
+          <ComboBox
+            name="src"
+            defaultValue={src}
+            options={options.sources}
+            allLabel={`ทุกรหัสที่มาของยา (${options.sources.length.toLocaleString('th-TH')})`}
+            aria-label="รหัสที่มาของยา"
+          />
         </div>
       )}
     </form>

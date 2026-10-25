@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ComboBox from './ComboBox';
 
 const VIEW_BUTTONS = [
   { value: 'hosp', label: 'หน่วยบริการ' },
@@ -63,72 +64,58 @@ export default function KpiFilter({ initial, options, types, defaultHosp }) {
         {view === 'zone' && (
           <label className="flex flex-col gap-1 text-sm text-gray-600 md:w-64">
             เขตสุขภาพ
-            <select name="zone" value={zone} onChange={(e) => setZone(e.target.value)} required className="input">
-              <option value="">— เลือกเขต —</option>
-              {options.zones.map((z) => (
-                <option key={z.code} value={z.code}>
-                  {z.name}
-                </option>
-              ))}
-            </select>
+            <ComboBox
+              name="zone"
+              value={zone}
+              onChange={setZone}
+              options={options.zones.map((z) => ({ value: z.code, label: z.name }))}
+              placeholder="— เลือกเขต —"
+              required
+            />
           </label>
         )}
 
         {(view === 'province' || view === 'district') && (
           <label className="flex flex-col gap-1 text-sm text-gray-600 md:w-64">
             จังหวัด
-            <select
+            <ComboBox
               name="province"
               value={province}
-              onChange={(e) => {
-                setProvince(e.target.value);
+              onChange={(v) => {
+                setProvince(v);
                 setDistrict('');
               }}
+              options={options.provinces.map((p) => ({ value: p.code, label: p.name }))}
+              placeholder="— พิมพ์หรือเลือกจังหวัด —"
               required
-              className="input"
-            >
-              <option value="">— เลือกจังหวัด —</option>
-              {options.provinces.map((p) => (
-                <option key={p.code} value={p.code}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            />
           </label>
         )}
 
         {view === 'district' && (
           <label className="flex flex-col gap-1 text-sm text-gray-600 md:w-64">
             อำเภอ
-            <select
+            <ComboBox
               name="district"
               value={district}
-              onChange={(e) => setDistrict(e.target.value)}
+              onChange={setDistrict}
+              options={districts.map((d) => ({ value: d.code, label: d.name }))}
+              placeholder={province ? '— พิมพ์หรือเลือกอำเภอ —' : 'เลือกจังหวัดก่อน'}
               required
               disabled={!province}
-              className="input disabled:bg-gray-100"
-            >
-              <option value="">{province ? '— เลือกอำเภอ —' : 'เลือกจังหวัดก่อน'}</option>
-              {districts.map((d) => (
-                <option key={d.code} value={d.code}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+            />
           </label>
         )}
 
         {view !== 'hosp' && (
           <label className="flex flex-col gap-1 text-sm text-gray-600 md:w-72">
             ประเภทหน่วยบริการ
-            <select name="type" defaultValue={initial.type || ''} className="input">
-              <option value="">ทุกประเภท</option>
-              {types.map((t) => (
-                <option key={t.code || '-'} value={t.code || '-'}>
-                  {t.name} ({t.n.toLocaleString('th-TH')})
-                </option>
-              ))}
-            </select>
+            <ComboBox
+              name="type"
+              defaultValue={initial.type || ''}
+              options={types.map((t) => ({ value: t.code || '-', label: `${t.name} (${t.n.toLocaleString('th-TH')})` }))}
+              allLabel="ทุกประเภท"
+            />
           </label>
         )}
 
