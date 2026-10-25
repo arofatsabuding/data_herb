@@ -13,6 +13,7 @@ publicfiles/opendata-2570/*.xlsx
 logs/
 data/*.json
 data/*.lock
+data/admin-secret
 publicfiles/opendata-*/manifest.json
 data/reference-archive/
 publicfiles/*.uploading

@@ -2,7 +2,7 @@ import AdminFiles from '@/components/AdminFiles';
 import { AdminLoginForm } from '@/components/AdminLogin';
 import SystemFiles from '@/components/SystemFiles';
 import { downloadHref, listSystemFiles } from '@/lib/system-files';
-import { isAdmin } from '@/lib/admin-auth';
+import { adminConfigured, isAdmin } from '@/lib/admin-auth';
 import { referenceStatus } from '@/lib/scheduler';
 import refs from '@/scripts/reference-files';
 import { uploadReference } from './actions';
@@ -15,6 +15,15 @@ const when = (t) =>
   new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }) + ' น.';
 
 export default async function AdminPage() {
+  if (!adminConfigured()) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16">
+        <div className="card p-6 text-center text-gray-600">
+          ปิดหน้าผู้ดูแลระบบอยู่ — เซิร์ฟเวอร์ยังไม่ได้ตั้งรหัส (<span className="mono">ADMIN_PAGE_CODE</span> ใน .env)
+        </div>
+      </div>
+    );
+  }
   // เข้าตรงด้วย URL โดยยังไม่ได้กรอกรหัส → แสดงช่องกรอกรหัสก่อน
   if (!(await isAdmin())) {
     return (
