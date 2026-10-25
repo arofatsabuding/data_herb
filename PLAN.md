@@ -16,7 +16,7 @@
 | 7 | REST API `/api/v1` + OpenAPI + `/llms.txt` + `/api-docs` | ✅ |
 | 8 | MCP server `/api/mcp` | ✅ |
 | 9 | แชท "ถาม AI" `/api/chat` | ✅ โค้ดเสร็จ — **รอใส่ `ANTHROPIC_API_KEY` บนเซิร์ฟเวอร์จริง** (ยังไม่เคยทดสอบกับ Claude จริง) |
-| 10 | เปิดเว็บผ่าน Cloudflare Tunnel (drug.thaipadi.com) | ✅ |
+| 10 | เปิดเว็บผ่าน Cloudflare Tunnel (herb.thaipadi.com — เดิม drug.thaipadi.com) | ✅ |
 | 11 | CI บน GitHub Actions (lint + import + build + smoke test ทุก PR) + PR template | ✅ |
 | 12 | ย้ายขึ้นเซิร์ฟเวอร์ของหน่วยงาน + คู่มือ deploy ฉบับเต็ม (PM2/บริการ Windows, สำรองข้อมูล) | ⬜ |
 

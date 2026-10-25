@@ -4,7 +4,7 @@
 เพื่อดูว่ายาแต่ละรายการมี TTMTID อะไร อยู่ใน Drug Group ใด เบิกได้เท่าไหร่ต่อ course
 พร้อมติดตามตัวชี้วัด **มูลค่ายาสมุนไพรในสิทธิ UC** รายหน่วยบริการถึงระดับประเทศ และเปิดให้ AI ดึงข้อมูลได้
 
-- เว็บจริง: **https://drug.thaipadi.com**
+- เว็บจริง: **https://herb.thaipadi.com**
 - เอกสารในโปรเจกต์:
   - **README.md** (ไฟล์นี้) — ภาพรวม, ติดตั้ง, การใช้งาน, การตั้งค่า
   - **[CLAUDE.md](CLAUDE.md)** — กติกาโค้ด แผนที่โค้ด และขั้นตอนทำงานร่วมกัน (Claude Code อ่านอัตโนมัติ — คนในทีมควรอ่านด้วย)
@@ -139,7 +139,7 @@ git push -u origin feat/<เรื่องที่ทำ> && gh pr create
 
 | ช่องทาง | URL | ใช้กับ |
 |---|---|---|
-| MCP server (Streamable HTTP) | `/api/mcp` | Claude (Settings → Connectors → Add custom connector), Claude Code: `claude mcp add --transport http herb-center https://drug.thaipadi.com/api/mcp` |
+| MCP server (Streamable HTTP) | `/api/mcp` | Claude (Settings → Connectors → Add custom connector), Claude Code: `claude mcp add --transport http herb-center https://herb.thaipadi.com/api/mcp` |
 | REST API (JSON) | `/api/v1`, เอกสาร `/api/v1/openapi.json` | ChatGPT Actions, สคริปต์, ระบบอื่น |
 | llms.txt | `/llms.txt` | AI ที่เข้ามาอ่านเว็บ |
 | แชทในเว็บ | `/api/chat` + ปุ่ม "ถาม AI" | ผู้ใช้เว็บ (Claude Opus 5.5, จำกัด 20 ข้อความ/IP/ชม. และ 500/วัน) |
@@ -187,5 +187,5 @@ npm ci && npm run import && npm run import:kpi && npm run build
 pm2 start npm --name data_herb -- start   # รันตลอด + เริ่มเองหลังรีบูต: pm2 save && pm2 startup
 ```
 
-ตอนนี้เปิดสู่อินเทอร์เน็ตผ่าน Cloudflare Tunnel (drug.thaipadi.com → localhost:4000)
+ตอนนี้เปิดสู่อินเทอร์เน็ตผ่าน Cloudflare Tunnel (herb.thaipadi.com → localhost:4000)
 อัปเดตโค้ด: `git pull` → หยุดเว็บ → `npm ci` (ถ้า package เปลี่ยน) → `npm run build` → เริ่มเว็บใหม่ → `npm run test:smoke -- http://localhost:4000`

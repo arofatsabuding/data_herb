@@ -9,7 +9,7 @@
 - รวม **รหัสยาแผนไทย 24 หลัก** (กรมการแพทย์แผนไทยฯ) กับ **TTMT Master** (สมสท.) → TTMTID, Drug Group, อัตราเบิกต่อ course
 - **ตัวชี้วัด "มูลค่ายาสมุนไพรในสิทธิ UC"** เทียบ 2 ปีงบประมาณ ระดับประเทศ/เขต/จังหวัด/อำเภอ/หน่วยบริการ จากข้อมูล opendata.moph.go.th (ดึงอัตโนมัติทุกวัน 22:00)
 - เปิดให้ AI ใช้: REST API `/api/v1`, MCP server `/api/mcp`, แชท "ถาม AI" ในเว็บ (`/api/chat`)
-- เว็บจริง: https://drug.thaipadi.com (Cloudflare Tunnel → `next start` พอร์ต 4000 บนเครื่องผู้ดูแลโปรเจกต์) · repo: github.com/arofatsabuding/data_herb (private)
+- เว็บจริง: https://herb.thaipadi.com (Cloudflare Tunnel → `next start` พอร์ต 4000 บนเครื่องผู้ดูแลโปรเจกต์) · repo: github.com/arofatsabuding/data_herb (private)
 - ผู้ใช้และทีมสื่อสารเป็น **ภาษาไทย** — ตอบเป็นภาษาไทย ข้อความบนหน้าเว็บเป็นภาษาไทย คอมเมนต์ในโค้ดเป็นภาษาไทย
 
 ## กติกาโค้ด (ต้องทำตาม)
