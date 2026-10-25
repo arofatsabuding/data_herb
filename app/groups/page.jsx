@@ -1,21 +1,35 @@
 import Link from 'next/link';
 import { RateBadge } from '@/components/Badges';
+import ComboBox from '@/components/ComboBox';
 import ExcelButton from '@/components/ExcelButton';
-import { listDrugGroups } from '@/lib/drugs';
+import { REIMBURSE_UNITS, listDrugGroups } from '@/lib/drugs';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata = { title: 'Drug Group — HERB Center' };
 
-export default function GroupsPage() {
-  const groups = listDrugGroups();
+// ชื่อในรายการเลือก: Drug Group + ตัวยาสำคัญ (พิมพ์ชื่อตัวยาก็หาเจอ)
+const groupLabel = (g) => (g.ingredients.length ? `${g.drug_group} — ${g.ingredients.join(', ')}` : g.drug_group);
+
+export default async function GroupsPage({ searchParams }) {
+  const sp = await searchParams;
+  const all = listDrugGroups();
+  const group = all.some((g) => g.drug_group === sp.group) ? sp.group : '';
+  const unit = REIMBURSE_UNITS.includes(sp.unit) ? sp.unit : '';
+  const groups = all.filter((g) => (!group || g.drug_group === group) && (!unit || g.reimburse_unit === unit));
+  const filtered = Boolean(group || unit);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="mb-2 text-2xl font-bold text-gray-800">Drug Group (สปสช.)</h1>
-          <p className="text-gray-600">ทั้งหมด {groups.length.toLocaleString('th-TH')} กลุ่ม — คลิกเพื่อดูรายการยาในกลุ่ม</p>
+          <p className="text-gray-600">
+            {filtered
+              ? `แสดง ${groups.length.toLocaleString('th-TH')} จาก ${all.length.toLocaleString('th-TH')} กลุ่ม`
+              : `ทั้งหมด ${all.length.toLocaleString('th-TH')} กลุ่ม`}{' '}
+            — คลิกเพื่อดูรายการยาในกลุ่ม
+          </p>
         </div>
         <ExcelButton
           filename="drug_groups"
@@ -30,6 +44,32 @@ export default function GroupsPage() {
           ]}
         />
       </div>
+
+      <form action="/groups" method="get" className="card mb-6 flex flex-col gap-3 p-4 md:flex-row">
+        <ComboBox
+          name="group"
+          defaultValue={group}
+          options={all.map((g) => ({ value: g.drug_group, label: groupLabel(g) }))}
+          allLabel={`ทุก Drug Group (${all.length.toLocaleString('th-TH')}) — พิมพ์ชื่อกลุ่มหรือตัวยา`}
+          aria-label="Drug Group"
+          className="flex-1"
+        />
+        <select name="unit" defaultValue={unit} className="input md:w-44" aria-label="หน่วยเบิก">
+          <option value="">ทุกหน่วยเบิก</option>
+          <option value="บาท">เบิกเป็นบาท</option>
+          <option value="point">เบิกเป็น point</option>
+        </select>
+        <button type="submit" className="btn-primary">
+          แสดงผล
+        </button>
+        {filtered && (
+          <Link href="/groups" className="btn-ghost justify-center">
+            ล้างตัวกรอง
+          </Link>
+        )}
+      </form>
+
+      {!groups.length && <div className="card p-8 text-center text-gray-600">ไม่พบ Drug Group ตามที่เลือก</div>}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {groups.map((g) => (
