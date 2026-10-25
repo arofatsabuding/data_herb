@@ -1,7 +1,7 @@
 // อัตรารหัสยาที่ผิดพลาด (รหัสที่ส่งมาไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก) — ใช้ในหน้า /kpi และ /stats
 import Link from 'next/link';
 import ExcelButton from '@/components/ExcelButton';
-import { rate } from '@/lib/kpi';
+import { rate, yearPairs } from '@/lib/kpi';
 
 const num = (n) => Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 0 });
 const pct = (v) => (v === null ? '-' : `${v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
@@ -36,9 +36,12 @@ const MEASURES = [
   { label: 'รายการยา (หน่วยบริการ × รหัสยา)', total: 'rows', bad: 'bad_rows', unit: 'รายการ' },
 ];
 
-export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, childHref, filename = 'code_errors', title = 'อัตรารหัสยาที่ผิดพลาด' }) {
+export default function KpiCodeErrors({ data, years, childLabel, childHref, filename = 'code_errors', title = 'อัตรารหัสยาที่ผิดพลาด' }) {
   const T = (y) => data.totals[y] || {};
-  const years = [prevYear, curYear].filter(Boolean);
+  const curYear = years[years.length - 1];
+  const pairs = yearPairs(years);
+  const before = (y) => years[years.indexOf(y) - 1] ?? null;
+  const changeLabel = ([a, b]) => (pairs.length > 1 ? `เปลี่ยนแปลง ${a}→${b}` : 'เปลี่ยนแปลง');
   const childRate = (c, y) => rate(c.byYear[y]?.bad_rows, c.byYear[y]?.rows);
   const children = [...data.children].sort(
     (a, b) => (childRate(b, curYear) ?? -1) - (childRate(a, curYear) ?? -1) || String(a.key).localeCompare(String(b.key))
@@ -67,7 +70,7 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
         />
       </div>
 
-      <div className="grid gap-4 p-6 sm:grid-cols-2">
+      <div className={`grid gap-4 p-6 sm:grid-cols-2 ${years.length > 2 ? 'lg:grid-cols-3' : ''}`}>
         {years.map((y) => {
           const r = rate(T(y).bad_rows, T(y).rows);
           return (
@@ -77,9 +80,9 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
               <div className="mt-1 text-sm text-gray-600">
                 ทั้งหมด {num(T(y).rows)} รายการ · ผิดพลาด {num(T(y).bad_rows)} รายการ
               </div>
-              {y === curYear && prevYear && (
+              {before(y) && (
                 <div className="mt-2 text-xs text-gray-500">
-                  เทียบปี {prevYear}: <RateDelta prev={rate(T(prevYear).bad_rows, T(prevYear).rows)} cur={r} />
+                  เทียบปี {before(y)}: <RateDelta prev={rate(T(before(y)).bad_rows, T(before(y)).rows)} cur={r} />
                 </div>
               )}
             </div>
@@ -102,7 +105,11 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
                   ร้อยละ {y}
                 </th>
               ))}
-              {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">เปลี่ยนแปลง</th>}
+              {pairs.map((p) => (
+                <th key={p.join()} className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                  {changeLabel(p)}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-rose-50">
@@ -119,11 +126,11 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
                     {pct(rate(T(y)[m.bad], T(y)[m.total]))}
                   </td>
                 ))}
-                {prevYear && (
-                  <td className="px-4 py-3 text-right">
-                    <RateDelta prev={rate(T(prevYear)[m.bad], T(prevYear)[m.total])} cur={rate(T(curYear)[m.bad], T(curYear)[m.total])} />
+                {pairs.map(([a, b]) => (
+                  <td key={`${a}-${b}`} className="px-4 py-3 text-right">
+                    <RateDelta prev={rate(T(a)[m.bad], T(a)[m.total])} cur={rate(T(b)[m.bad], T(b)[m.total])} />
                   </td>
-                )}
+                ))}
               </tr>
             ))}
           </tbody>
@@ -142,7 +149,11 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
                     ปี {y}
                   </th>
                 ))}
-                {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">เปลี่ยนแปลง</th>}
+                {pairs.map((p) => (
+                  <th key={p.join()} className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                    {changeLabel(p)}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-rose-50">
@@ -169,11 +180,11 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
                         <RateBar value={childRate(c, y)} />
                       </td>
                     ))}
-                    {prevYear && (
-                      <td className="px-4 py-2 text-right">
-                        <RateDelta prev={childRate(c, prevYear)} cur={childRate(c, curYear)} />
+                    {pairs.map(([a, b]) => (
+                      <td key={`${a}-${b}`} className="px-4 py-2 text-right">
+                        <RateDelta prev={childRate(c, a)} cur={childRate(c, b)} />
                       </td>
-                    )}
+                    ))}
                   </tr>
                 );
               })}
@@ -191,11 +202,11 @@ export default function KpiCodeErrors({ data, prevYear, curYear, childLabel, chi
                     </div>
                   </td>
                 ))}
-                {prevYear && (
-                  <td className="px-4 py-3 text-right">
-                    <RateDelta prev={rate(T(prevYear).bad_rows, T(prevYear).rows)} cur={rate(T(curYear).bad_rows, T(curYear).rows)} />
+                {pairs.map(([a, b]) => (
+                  <td key={`${a}-${b}`} className="px-4 py-3 text-right">
+                    <RateDelta prev={rate(T(a).bad_rows, T(a).rows)} cur={rate(T(b).bad_rows, T(b).rows)} />
                   </td>
-                )}
+                ))}
               </tr>
             </tfoot>
           </table>

@@ -1,7 +1,7 @@
 // Excel รหัส 24 หลักที่ไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก (ทั้งหมด) ตามพื้นที่ที่เลือกในหน้า /kpi
 import { cookies } from 'next/headers';
 import { xlsxResponse } from '@/lib/excel';
-import { NOT_IN_GROUP, PREF_COOKIE, getNotFound24, kpiAvailable, parseKpiQuery, parsePrefs, resolveSets } from '@/lib/kpi';
+import { NOT_IN_GROUP, getNotFound24, kpiAvailable, parseKpiQuery, setsFromCookies } from '@/lib/kpi';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,8 +10,8 @@ export async function GET(request) {
   const { q, missing } = parseKpiQuery(Object.fromEntries(request.nextUrl.searchParams));
   if (missing) return new Response(`กรุณาเลือก${missing}`, { status: 400 });
 
-  // ใช้ไฟล์ตามที่ผู้ใช้คนนี้เลือกไว้ เหมือนหน้า /kpi
-  const sets = resolveSets(parsePrefs((await cookies()).get(PREF_COOKIE)?.value));
+  // ใช้ไฟล์และปีตามที่ผู้ใช้คนนี้เลือกไว้ เหมือนหน้า /kpi
+  const sets = setsFromCookies(await cookies());
   const years = sets.map((s) => s.year);
   const items = getNotFound24(q, sets, null);
   const header = ['รหัส 24 หลัก (หลังล้าง)', 'รหัสที่ส่งมา (didstd)', 'กลุ่มยา 11 หลัก', 'ชื่อกลุ่มยา', 'ราคา/course'];

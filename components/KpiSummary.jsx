@@ -3,7 +3,7 @@ import Link from 'next/link';
 import ExcelButton from '@/components/ExcelButton';
 import Change from '@/components/KpiChange';
 import { RateDelta } from '@/components/KpiCodeErrors';
-import { EXCLUDED_ZONES, KPI_NAME, NOT_IN_GROUP, getCodeErrors, getCompareReport, rate } from '@/lib/kpi';
+import { EXCLUDED_ZONES, KPI_NAME, NOT_IN_GROUP, getCodeErrors, getCompareReport, rate, yearPairs } from '@/lib/kpi';
 
 const num = (n) => Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 0 });
 const pct = (v) => (v === null ? '-' : `${v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
@@ -26,7 +26,9 @@ export default function KpiSummary({ sets }) {
   if (!report) return null;
   const errors = getCodeErrors(q, sets);
   const years = sets.map((s) => s.year);
-  const [prevYear, curYear] = years.length === 2 ? years : [null, years[0]];
+  const curYear = years[years.length - 1];
+  const prevYear = years.length > 1 ? years[years.length - 2] : null;
+  const pairs = yearPairs(years);
   const T = (y) => report.totals[y] || {};
   const E = (y) => errors.totals[y] || {};
   const errRate = (y) => rate(E(y).bad_rows, E(y).rows);
@@ -35,12 +37,11 @@ export default function KpiSummary({ sets }) {
   const zones = [...report.children].sort((a, b) => Number(a.key) - Number(b.key));
   const top = [...report.topGroups].sort((a, b) => val(b, curYear) - val(a, curYear)).slice(0, 5);
   const notFoundValue = (y) => (T(y).vs_uc || 0) - (T(y).matched_vs_uc || 0);
-  const years2 = [prevYear, curYear].filter(Boolean);
   const groupSheet = [
-    ['อันดับ', 'กลุ่มยา 11 หลัก', 'ชื่อกลุ่มยา', ...years2.map((y) => `มูลค่า ${y} (บาท)`)],
+    ['อันดับ', 'กลุ่มยา 11 หลัก', 'ชื่อกลุ่มยา', ...years.map((y) => `มูลค่า ${y} (บาท)`)],
     ...[...report.topGroups]
       .sort((a, b) => val(b, curYear) - val(a, curYear))
-      .map((d, i) => [i + 1, d.code11, d.full_name, ...years2.map((y) => val(d, y))]),
+      .map((d, i) => [i + 1, d.code11, d.full_name, ...years.map((y) => val(d, y))]),
   ];
 
   return (
@@ -49,7 +50,7 @@ export default function KpiSummary({ sets }) {
         <div>
           <h2 className="text-xl font-bold text-gray-800">ตัวชี้วัด: {KPI_NAME}</h2>
           <p className="text-sm text-gray-500">
-            ภาพรวมประเทศ {prevYear ? `เทียบปีงบประมาณ ${prevYear} กับ ${curYear}` : `ปีงบประมาณ ${curYear}`} · ไม่รวมเขตสุขภาพที่{' '}
+            ภาพรวมประเทศ {prevYear ? `เทียบปีงบประมาณ ${years.join(' · ')}` : `ปีงบประมาณ ${curYear}`} · ไม่รวมเขตสุขภาพที่{' '}
             {EXCLUDED_ZONES.join(', ')} และหน่วยบริการที่ไม่พบเขตสุขภาพ
           </p>
         </div>
@@ -66,13 +67,19 @@ export default function KpiSummary({ sets }) {
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {prevYear && <Card label={`มูลค่าตัวชี้วัด ปี ${prevYear}`} value={num(T(prevYear).kpi_value)} unit="บาท" />}
-        <Card
-          label={`มูลค่าตัวชี้วัด ปี ${curYear}`}
-          value={num(T(curYear).kpi_value)}
-          unit="บาท"
-          sub={prevYear && <Change prev={T(prevYear).kpi_value} cur={T(curYear).kpi_value} />}
-        />
+        {years.map((y, i) => (
+          <Card
+            key={y}
+            label={`มูลค่าตัวชี้วัด ปี ${y}`}
+            value={num(T(y).kpi_value)}
+            unit="บาท"
+            sub={i > 0 && (
+              <>
+                <Change prev={T(years[i - 1]).kpi_value} cur={T(y).kpi_value} /> จากปี {years[i - 1]}
+              </>
+            )}
+          />
+        ))}
         <Card
           label={`หน่วยบริการที่จ่ายยาสมุนไพร ปี ${curYear}`}
           value={num(T(curYear).hosp_count)}
@@ -129,9 +136,16 @@ export default function KpiSummary({ sets }) {
               <thead className="bg-gradient-to-r from-emerald-50 to-teal-50 text-left text-emerald-900">
                 <tr>
                   <th className="px-4 py-3 font-semibold">เขตสุขภาพ</th>
-                  {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ปี {prevYear} (บาท)</th>}
-                  <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ปี {curYear} (บาท)</th>
-                  {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">เปลี่ยนแปลง</th>}
+                  {years.map((y) => (
+                    <th key={y} className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                      ปี {y} (บาท)
+                    </th>
+                  ))}
+                  {pairs.map(([a, b]) => (
+                    <th key={`${a}-${b}`} className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                      {pairs.length > 1 ? `เปลี่ยนแปลง ${a}→${b}` : 'เปลี่ยนแปลง'}
+                    </th>
+                  ))}
                   <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">รหัสผิดพลาด {curYear}</th>
                 </tr>
               </thead>
@@ -145,13 +159,16 @@ export default function KpiSummary({ sets }) {
                           {z.label}
                         </Link>
                       </td>
-                      {prevYear && <td className="px-4 py-2 text-right text-gray-600">{num(val(z, prevYear))}</td>}
-                      <td className="px-4 py-2 text-right font-semibold text-gray-800">{num(val(z, curYear))}</td>
-                      {prevYear && (
-                        <td className="px-4 py-2 text-right">
-                          <Change prev={val(z, prevYear)} cur={val(z, curYear)} />
+                      {years.map((y) => (
+                        <td key={y} className={`px-4 py-2 text-right ${y === curYear ? 'font-semibold text-gray-800' : 'text-gray-600'}`}>
+                          {num(val(z, y))}
                         </td>
-                      )}
+                      ))}
+                      {pairs.map(([a, b]) => (
+                        <td key={`${a}-${b}`} className="px-4 py-2 text-right">
+                          <Change prev={val(z, a)} cur={val(z, b)} />
+                        </td>
+                      ))}
                       <td className="px-4 py-2 text-right text-gray-700">{pct(rate(e?.bad_rows, e?.rows))}</td>
                     </tr>
                   );
@@ -160,13 +177,16 @@ export default function KpiSummary({ sets }) {
               <tfoot className="border-t-2 border-emerald-200 bg-emerald-50/70 font-bold text-gray-800">
                 <tr>
                   <td className="px-4 py-3">รวมทั้งหมด</td>
-                  {prevYear && <td className="px-4 py-3 text-right">{num(T(prevYear).kpi_value)}</td>}
-                  <td className="px-4 py-3 text-right text-emerald-700">{num(T(curYear).kpi_value)}</td>
-                  {prevYear && (
-                    <td className="px-4 py-3 text-right">
-                      <Change prev={T(prevYear).kpi_value} cur={T(curYear).kpi_value} />
+                  {years.map((y) => (
+                    <td key={y} className={`px-4 py-3 text-right ${y === curYear ? 'text-emerald-700' : ''}`}>
+                      {num(T(y).kpi_value)}
                     </td>
-                  )}
+                  ))}
+                  {pairs.map(([a, b]) => (
+                    <td key={`${a}-${b}`} className="px-4 py-3 text-right">
+                      <Change prev={T(a).kpi_value} cur={T(b).kpi_value} />
+                    </td>
+                  ))}
                   <td className="px-4 py-3 text-right">{pct(errRate(curYear))}</td>
                 </tr>
               </tfoot>

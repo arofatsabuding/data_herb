@@ -3,6 +3,7 @@
 // จากนั้นนำเข้า data/kpi.db เป็น dataset ใหม่
 //
 // ใช้งาน: npm run fetch:opendata
+//         npm run fetch:opendata -- --year 2568   ดึงข้อมูลปีย้อนหลัง → publicfiles/opendata-2568/ (ไม่ใช้ปีแทน)
 // ตั้งค่า (env):
 //   OPENDATA_FETCH_YEAR  ปีที่ส่งให้ API (ค่าเริ่มต้น auto = ใช้ 2570 ถ้า API มีข้อมูลแล้ว
 //                        ถ้ายังไม่มี ใช้ OPENDATA_FALLBACK_YEAR แทน)
@@ -13,8 +14,14 @@ const XLSX = require('xlsx');
 const kpi = require('./kpi-lib');
 
 const API_URL = process.env.OPENDATA_API_URL || 'https://opendata.moph.go.th/api/report_data';
-const SAVE_YEAR = kpi.FETCH_YEAR_TARGET;
-const FETCH_YEAR_SETTING = (process.env.OPENDATA_FETCH_YEAR || 'auto').trim();
+// --year <ปี> = ดึงปีนั้นตรง ๆ แล้วบันทึกในโฟลเดอร์ของปีนั้น
+const YEAR_ARG = process.argv.includes('--year') ? process.argv[process.argv.indexOf('--year') + 1] : null;
+if (YEAR_ARG !== null && !/^25\d\d$/.test(YEAR_ARG)) {
+  console.error(`--year ต้องเป็นปี พ.ศ. 4 หลัก เช่น 2568 (ได้รับ: ${YEAR_ARG})`);
+  process.exit(1);
+}
+const SAVE_YEAR = YEAR_ARG ? Number(YEAR_ARG) : kpi.FETCH_YEAR_TARGET;
+const FETCH_YEAR_SETTING = YEAR_ARG || (process.env.OPENDATA_FETCH_YEAR || 'auto').trim();
 const FALLBACK_YEAR = (process.env.OPENDATA_FALLBACK_YEAR || '2569').trim();
 let FETCH_YEAR = String(SAVE_YEAR);
 // จังหวัดที่ใช้ตรวจว่า API มีข้อมูลปีนั้นแล้วหรือยัง

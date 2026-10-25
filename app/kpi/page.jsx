@@ -10,8 +10,11 @@ import {
   EXCLUDED_ZONES,
   KPI_NAME,
   NOT_IN_GROUP,
+  COMPARE_YEARS,
   PREF_COOKIE,
   VIEWS,
+  YEARS_COOKIE,
+  availableYears,
   getAreaOptions,
   getCodeErrors,
   getCompareReport,
@@ -20,12 +23,14 @@ import {
   kpiAvailable,
   parseKpiQuery,
   parsePrefs,
+  parseYears,
   resolveSets,
   sumByYear,
+  yearPairs,
 } from '@/lib/kpi';
 import { MAX_RETRIES, cronEnabled, ensureImported, fetchInProgress } from '@/lib/scheduler';
 import kpiLib from '@/scripts/kpi-lib';
-import { checkFetch, fetchNow, selectFile } from './actions';
+import { checkFetch, fetchNow, selectFile, selectYears } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,15 +127,20 @@ export default async function KpiPage({ searchParams }) {
   if (!kpiAvailable()) return <EmptyState />;
   const sp = await searchParams;
   // ไฟล์ของแต่ละปีตามที่ผู้ใช้คนนี้เลือกไว้ (cookie) — ค่าเริ่มต้น = ไฟล์ล่าสุด
-  const prefs = parsePrefs((await cookies()).get(PREF_COOKIE)?.value);
-  const sets = resolveSets(prefs);
+  const store = await cookies();
+  const prefs = parsePrefs(store.get(PREF_COOKIE)?.value);
+  const chosenYears = parseYears(store.get(YEARS_COOKIE)?.value);
+  const sets = resolveSets(prefs, chosenYears);
   if (!sets.length) return <EmptyState />;
   // ไฟล์ที่เลือกแต่ยังไม่ได้นำเข้า → สั่งนำเข้าเบื้องหลัง ระหว่างนี้ใช้ไฟล์ล่าสุดที่มี
   for (const s of sets) if (s.pending) ensureImported(s.year, s.pending);
 
-  // เทียบ 2 ปีล่าสุดที่มีข้อมูล (เช่น 2569 → 2570)
+  // เทียบปีล่าสุดที่มีข้อมูล (เช่น 2568 → 2569 → 2570) — การเปลี่ยนแปลงเทียบกับปีก่อนหน้าเสมอ
   const years = sets.map((s) => s.year);
-  const [prevYear, curYear] = years.length === 2 ? years : [null, years[0]];
+  const curYear = years[years.length - 1];
+  const prevYear = years.length > 1 ? years[years.length - 2] : null;
+  const yearOf = (y) => years.indexOf(y);
+  const before = (y) => (yearOf(y) > 0 ? years[yearOf(y) - 1] : null);
 
   const { q, missing } = parseKpiQuery(sp);
   const report = missing ? null : getCompareReport(q, sets);
@@ -152,7 +162,7 @@ export default async function KpiPage({ searchParams }) {
         <div className="relative mx-auto max-w-7xl px-4 py-10 md:py-14">
           <span className="badge mb-4 border border-emerald-500/30 bg-emerald-500/20 px-4 py-1 text-sm text-emerald-300">
             ตัวชี้วัด · {VIEWS[q.view].label}
-            {prevYear ? ` · เทียบปีงบประมาณ ${prevYear} กับ ${curYear}` : ` · ปีงบประมาณ ${curYear}`}
+            {prevYear ? ` · เทียบปีงบประมาณ ${years.join(' · ')}` : ` · ปีงบประมาณ ${curYear}`}
           </span>
           <h1 className="mb-1 text-3xl font-bold text-white md:text-4xl">{KPI_NAME}</h1>
           {report && (
@@ -164,17 +174,17 @@ export default async function KpiPage({ searchParams }) {
 
           {report && (
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-8">
-              {prevYear && (
-                <>
+              {years.slice(0, -1).map((y) => (
+                <div key={y} className="contents">
                   <div>
-                    <div className="text-sm text-gray-400">ปี {prevYear}</div>
-                    <div className="text-3xl font-bold text-gray-200 md:text-4xl">
-                      {num(prev.kpi_value)} <span className="text-base font-normal text-gray-400">บาท</span>
+                    <div className="text-sm text-gray-400">ปี {y}</div>
+                    <div className="text-2xl font-bold text-gray-200 md:text-3xl">
+                      {num(T(y).kpi_value)} <span className="text-base font-normal text-gray-400">บาท</span>
                     </div>
                   </div>
                   <div className="hidden text-3xl text-gray-500 md:block">→</div>
-                </>
-              )}
+                </div>
+              ))}
               <div>
                 <div className="text-sm text-gray-400">ปี {curYear}</div>
                 <div className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
@@ -185,7 +195,7 @@ export default async function KpiPage({ searchParams }) {
                 <div>
                   <Change prev={prev.kpi_value} cur={cur.kpi_value} size="lg" />
                   <div className="mt-1 text-sm text-gray-400">
-                    {diff >= 0 ? 'เพิ่มขึ้น' : 'ลดลง'} {num(Math.abs(diff))} บาท
+                    {diff >= 0 ? 'เพิ่มขึ้น' : 'ลดลง'} {num(Math.abs(diff))} บาท จากปี {prevYear}
                   </div>
                 </div>
               )}
@@ -196,6 +206,13 @@ export default async function KpiPage({ searchParams }) {
 
       <div className="mx-auto max-w-7xl px-4 py-8">
         <KpiDataBar
+          compare={{
+            all: availableYears(),
+            selected: years,
+            defaultYears: availableYears().slice(-COMPARE_YEARS),
+            custom: chosenYears.length >= 2,
+          }}
+          compareAction={selectYears}
           years={dataOptions(sets, prefs)}
           fetching={fetchInProgress()}
           roundText={roundText()}
@@ -242,28 +259,28 @@ export default async function KpiPage({ searchParams }) {
         {report && (
           <>
             <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {prevYear && (
-                <StatCard label={`มูลค่าตัวชี้วัด ปี ${prevYear}`} value={num(prev.kpi_value)} unit="บาท" note={`${million(prev.kpi_value)} ล้านบาท`} />
-              )}
-              <StatCard
-                label={`มูลค่าตัวชี้วัด ปี ${curYear}`}
-                value={num(cur.kpi_value)}
-                unit="บาท"
-                accent="text-emerald-600"
-                note={`${million(cur.kpi_value)} ล้านบาท`}
-              />
-              {prevYear && (
-                <StatCard
-                  label="การเปลี่ยนแปลง"
-                  value={`${diff >= 0 ? '+' : '−'}${num(Math.abs(diff))}`}
-                  unit="บาท"
-                  accent={diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}
-                >
-                  <div className="mt-1">
-                    <Change prev={prev.kpi_value} cur={cur.kpi_value} />
-                  </div>
-                </StatCard>
-              )}
+              {years.map((y) => {
+                const b = before(y);
+                const d = (T(y).kpi_value || 0) - (T(b).kpi_value || 0);
+                return (
+                  <StatCard
+                    key={y}
+                    label={`มูลค่าตัวชี้วัด ปี ${y}`}
+                    value={num(T(y).kpi_value)}
+                    unit="บาท"
+                    accent={y === curYear ? 'text-emerald-600' : undefined}
+                    note={`${million(T(y).kpi_value)} ล้านบาท`}
+                  >
+                    {b && (
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                        <Change prev={T(b).kpi_value} cur={T(y).kpi_value} />
+                        {d >= 0 ? '+' : '−'}
+                        {num(Math.abs(d))} บาท จากปี {b}
+                      </div>
+                    )}
+                  </StatCard>
+                );
+              })}
               <StatCard
                 label="จำนวนครั้งที่จ่ายยา UC (กลุ่มที่คิดตัวชี้วัด)"
                 value={num(cur.matched_vs_uc)}
@@ -274,33 +291,33 @@ export default async function KpiPage({ searchParams }) {
                     : `ปี ${curYear} · หน่วยบริการ ${num(cur.hosp_count)} แห่ง`
                 }
               >
-                {prevYear && (
-                  <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                    ปี {prevYear}: {num(prev.matched_vs_uc)} <Change prev={prev.matched_vs_uc} cur={cur.matched_vs_uc} />
+                {years.slice(0, -1).map((y) => (
+                  <div key={y} className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                    ปี {y}: {num(T(y).matched_vs_uc)}
+                    {y === prevYear && <Change prev={prev.matched_vs_uc} cur={cur.matched_vs_uc} />}
                   </div>
-                )}
+                ))}
               </StatCard>
             </div>
 
             {q.view === 'hosp' ? (
-              <HospDrugs drugs={report.children.filter((d) => d.in24)} q={q} prevYear={prevYear} curYear={curYear} />
+              <HospDrugs drugs={report.children.filter((d) => d.in24)} q={q} years={years} />
             ) : (
               <div className="grid gap-6 lg:grid-cols-3">
-                <ChildrenTable report={report} q={q} prevYear={prevYear} curYear={curYear} />
-                <TopGroups items={report.topGroups} q={q} prevYear={prevYear} curYear={curYear} />
+                <ChildrenTable report={report} q={q} years={years} />
+                <TopGroups items={report.topGroups} q={q} years={years} />
               </div>
             )}
 
             <KpiCodeErrors
               data={codeErrors}
-              prevYear={prevYear}
-              curYear={curYear}
+              years={years}
               childLabel={VIEWS[q.view].childLabel}
               childHref={(key) => childHref(q, VIEWS[q.view].child, key)}
               filename={kpiFile(q, 'code_errors')}
             />
 
-            <NotFound24 items={report.notFound24} q={q} prevYear={prevYear} curYear={curYear} />
+            <NotFound24 items={report.notFound24} q={q} years={years} />
 
             {q.view === 'hosp' && report.area.hosp && <HospLinks h={report.area.hosp} />}
           </>
@@ -311,7 +328,7 @@ export default async function KpiPage({ searchParams }) {
           <ul className="list-inside list-disc space-y-1">
             <li>ล้างรหัส didstd ให้เหลือแต่ตัวเลข แล้วใช้ 11 หลักแรกหากลุ่มยาใน herbal_drug_master_11</li>
             <li>มูลค่าตัวชี้วัด = จำนวนครั้ง UC (vs_uc) × ราคาต่อ course ของกลุ่มยา — {NOT_IN_GROUP} คิดเป็น 0 บาท</li>
-            <li>ร้อยละการเปลี่ยนแปลง = (ปีหลัง − ปีก่อน) ÷ ปีก่อน × 100</li>
+            <li>ร้อยละการเปลี่ยนแปลง = (ปีหลัง − ปีก่อน) ÷ ปีก่อน × 100 — เทียบกับปีก่อนหน้าทีละคู่ปี</li>
             <li>
               ไม่นำมาคำนวณ: หน่วยบริการในเขตสุขภาพที่ {EXCLUDED_ZONES.join(', ')} และหน่วยบริการที่ไม่พบเขตสุขภาพ
             </li>
@@ -359,11 +376,20 @@ function childHref(q, child, key) {
   return kpiHref({ view: 'hosp', hosp: key });
 }
 
-function ChildrenTable({ report, q, prevYear, curYear }) {
+// หัวคอลัมน์ "เปลี่ยนแปลง" ของแต่ละคู่ปี — มีคู่เดียวใช้คำว่า "เปลี่ยนแปลง" เฉย ๆ
+const changeLabel = (pairs, [a, b]) => (pairs.length > 1 ? `เปลี่ยนแปลง ${a}→${b}` : 'เปลี่ยนแปลง');
+
+function ChildrenTable({ report, q, years }) {
   const V = VIEWS[q.view];
+  const curYear = years[years.length - 1];
+  const pairs = yearPairs(years);
   const val = (c, y) => c.byYear[y]?.kpi_value || 0;
-  const rows = [...report.children].sort((a, b) => val(b, curYear) - val(a, curYear) || val(b, prevYear) - val(a, prevYear));
-  const max = Math.max(...rows.flatMap((c) => [val(c, curYear), val(c, prevYear)]), 0);
+  const newestFirst = [...years].reverse();
+  const rows = [...report.children].sort((a, b) => {
+    for (const y of newestFirst) if (val(b, y) !== val(a, y)) return val(b, y) - val(a, y);
+    return 0;
+  });
+  const max = Math.max(...rows.flatMap((c) => years.map((y) => val(c, y))), 0);
   const hospLevel = V.child === 'hosp';
   const total = (y) => report.totals[y] || {};
   return (
@@ -380,9 +406,16 @@ function ChildrenTable({ report, q, prevYear, curYear }) {
             <tr>
               <th className="px-4 py-3 font-semibold">#</th>
               <th className="px-4 py-3 font-semibold">{V.childLabel}</th>
-              {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ปี {prevYear} (บาท)</th>}
-              <th className="min-w-40 whitespace-nowrap px-4 py-3 text-right font-semibold">ปี {curYear} (บาท)</th>
-              {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">เปลี่ยนแปลง</th>}
+              {years.map((y) => (
+                <th key={y} className={`whitespace-nowrap px-4 py-3 text-right font-semibold ${y === curYear ? 'min-w-40' : ''}`}>
+                  ปี {y} (บาท)
+                </th>
+              ))}
+              {pairs.map((p) => (
+                <th key={p.join()} className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                  {changeLabel(pairs, p)}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -405,25 +438,28 @@ function ChildrenTable({ report, q, prevYear, curYear }) {
                           <span className="mono">{c.key}</span> · {c.type_name || 'ไม่ระบุประเภท'}
                         </>
                       ) : (
-                        `${num(c.byYear[curYear]?.hosp_count ?? c.byYear[prevYear]?.hosp_count)} หน่วยบริการ`
+                        `${num(newestFirst.map((y) => c.byYear[y]?.hosp_count).find((n) => n != null))} หน่วยบริการ`
                       )}
                     </div>
                   </td>
-                  {prevYear && (
-                    <td className="px-4 py-3 text-right">
-                      <div className="text-gray-600">{num(val(c, prevYear))}</div>
-                      <ShareBar value={val(c, prevYear)} max={max} tone="gray" />
-                    </td>
+                  {years.map((y) =>
+                    y === curYear ? (
+                      <td key={y} className="px-4 py-3 text-right">
+                        <div className="font-semibold text-gray-800">{num(val(c, y))}</div>
+                        <ShareBar value={val(c, y)} max={max} />
+                      </td>
+                    ) : (
+                      <td key={y} className="px-4 py-3 text-right">
+                        <div className="text-gray-600">{num(val(c, y))}</div>
+                        <ShareBar value={val(c, y)} max={max} tone="gray" />
+                      </td>
+                    )
                   )}
-                  <td className="px-4 py-3 text-right">
-                    <div className="font-semibold text-gray-800">{num(val(c, curYear))}</div>
-                    <ShareBar value={val(c, curYear)} max={max} />
-                  </td>
-                  {prevYear && (
-                    <td className="px-4 py-3 text-right">
-                      <Change prev={val(c, prevYear)} cur={val(c, curYear)} />
+                  {pairs.map(([a, b]) => (
+                    <td key={`${a}-${b}`} className="px-4 py-3 text-right">
+                      <Change prev={val(c, a)} cur={val(c, b)} />
                     </td>
-                  )}
+                  ))}
                 </tr>
               );
             })}
@@ -434,16 +470,21 @@ function ChildrenTable({ report, q, prevYear, curYear }) {
               <td className="px-4 py-3">
                 รวมทั้งหมด
                 <div className="text-xs font-normal text-gray-500">
-                  {hospLevel ? `${num(rows.length)} หน่วยบริการ` : `${num(total(curYear).hosp_count ?? total(prevYear).hosp_count)} หน่วยบริการ`}
+                  {hospLevel
+                    ? `${num(rows.length)} หน่วยบริการ`
+                    : `${num(newestFirst.map((y) => total(y).hosp_count).find((n) => n != null))} หน่วยบริการ`}
                 </div>
               </td>
-              {prevYear && <td className="whitespace-nowrap px-4 py-3 text-right">{num(total(prevYear).kpi_value)}</td>}
-              <td className="whitespace-nowrap px-4 py-3 text-right text-emerald-700">{num(total(curYear).kpi_value)}</td>
-              {prevYear && (
-                <td className="px-4 py-3 text-right">
-                  <Change prev={total(prevYear).kpi_value} cur={total(curYear).kpi_value} />
+              {years.map((y) => (
+                <td key={y} className={`whitespace-nowrap px-4 py-3 text-right ${y === curYear ? 'text-emerald-700' : ''}`}>
+                  {num(total(y).kpi_value)}
                 </td>
-              )}
+              ))}
+              {pairs.map(([a, b]) => (
+                <td key={`${a}-${b}`} className="px-4 py-3 text-right">
+                  <Change prev={total(a).kpi_value} cur={total(b).kpi_value} />
+                </td>
+              ))}
             </tr>
           </tfoot>
         </table>
@@ -453,34 +494,44 @@ function ChildrenTable({ report, q, prevYear, curYear }) {
 }
 
 // แถวรวมท้ายตารางยา (รวมเฉพาะแถวในตารางนั้น)
-function DrugTotalRow({ label, sums, prevYear, curYear, before, showChange = true, showValue = true, sticky = false }) {
+function DrugTotalRow({ label, sums, years, before, showChange = true, showValue = true, sticky = false }) {
   const g = (y, f) => sums[y]?.[f] || 0;
+  const curYear = years[years.length - 1];
   return (
     <tfoot className={`border-t-2 border-emerald-200 bg-emerald-50 font-bold text-gray-800 ${sticky ? 'sticky bottom-0' : ''}`}>
       <tr>
         <td className="px-4 py-3" colSpan={before}>
           {label}
         </td>
-        {prevYear && <td className="px-4 py-3 text-right">{num(g(prevYear, 'vs_uc'))}</td>}
-        <td className="px-4 py-3 text-right">{num(g(curYear, 'vs_uc'))}</td>
-        {showValue && prevYear && <td className="whitespace-nowrap px-4 py-3 text-right">{num(g(prevYear, 'kpi_value'))}</td>}
-        {showValue && <td className="whitespace-nowrap px-4 py-3 text-right text-emerald-700">{num(g(curYear, 'kpi_value'))}</td>}
-        {prevYear && showChange && (
-          <td className="px-4 py-3 text-right">
-            <Change prev={g(prevYear, 'kpi_value')} cur={g(curYear, 'kpi_value')} />
+        {years.map((y) => (
+          <td key={y} className="px-4 py-3 text-right">
+            {num(g(y, 'vs_uc'))}
           </td>
-        )}
+        ))}
+        {showValue &&
+          years.map((y) => (
+            <td key={y} className={`whitespace-nowrap px-4 py-3 text-right ${y === curYear ? 'text-emerald-700' : ''}`}>
+              {num(g(y, 'kpi_value'))}
+            </td>
+          ))}
+        {showChange &&
+          yearPairs(years).map(([a, b]) => (
+            <td key={`${a}-${b}`} className="px-4 py-3 text-right">
+              <Change prev={g(a, 'kpi_value')} cur={g(b, 'kpi_value')} />
+            </td>
+          ))}
       </tr>
     </tfoot>
   );
 }
 
-function TopGroups({ items, q, prevYear, curYear }) {
+function TopGroups({ items, q, years }) {
+  const curYear = years[years.length - 1];
+  const prevYear = years.length > 1 ? years[years.length - 2] : null;
   const val = (d, y) => d.byYear[y]?.kpi_value || 0;
   const sorted = [...items].sort((a, b) => val(b, curYear) - val(a, curYear));
   const top = sorted.slice(0, 10);
   const max = Math.max(...top.map((d) => val(d, curYear)), 0);
-  const years = [prevYear, curYear].filter(Boolean);
   // Excel ใส่ทุกกลุ่มยา (บนหน้าแสดง 10 อันดับ)
   const sheet = [
     ['อันดับ', 'กลุ่มยา 11 หลัก', 'ชื่อกลุ่มยา', 'ราคา/course', ...years.flatMap((y) => [`ครั้ง UC ${y}`, `มูลค่า ${y} (บาท)`])],
@@ -510,12 +561,10 @@ function TopGroups({ items, q, prevYear, curYear }) {
             <ShareBar value={val(d, curYear)} max={max} />
             <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
               <span className="mono">{d.code11}</span>
-              {prevYear && (
-                <>
-                  <span>· ปี {prevYear}: {num(val(d, prevYear))} บาท</span>
-                  <Change prev={val(d, prevYear)} cur={val(d, curYear)} />
-                </>
-              )}
+              {years.slice(0, -1).map((y) => (
+                <span key={y}>· ปี {y}: {num(val(d, y))} บาท</span>
+              ))}
+              {prevYear && <Change prev={val(d, prevYear)} cur={val(d, curYear)} />}
             </div>
           </li>
         ))}
@@ -537,7 +586,9 @@ function Code24({ d }) {
   );
 }
 
-function HospDrugs({ drugs, q, prevYear, curYear }) {
+function HospDrugs({ drugs, q, years }) {
+  const curYear = years[years.length - 1];
+  const pairs = yearPairs(years);
   const get = (d, y, f) => d.byYear[y]?.[f] || 0;
   const rows = [...drugs].sort(
     (a, b) =>
@@ -559,11 +610,21 @@ function HospDrugs({ drugs, q, prevYear, curYear }) {
               <th className="px-4 py-3 font-semibold">ชื่อยา</th>
               <th className="whitespace-nowrap px-4 py-3 text-center font-semibold">รหัสที่มาของยา</th>
               <th className="px-4 py-3 font-semibold">กลุ่มยา (11 หลัก)</th>
-              {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC {prevYear}</th>}
-              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC {curYear}</th>
-              {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">มูลค่า {prevYear}</th>}
-              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">มูลค่า {curYear}</th>
-              {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">เปลี่ยนแปลง</th>}
+              {years.map((y) => (
+                <th key={y} className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                  ครั้ง UC {y}
+                </th>
+              ))}
+              {years.map((y) => (
+                <th key={y} className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                  มูลค่า {y}
+                </th>
+              ))}
+              {pairs.map((p) => (
+                <th key={p.join()} className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                  {changeLabel(pairs, p)}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -583,15 +644,21 @@ function HospDrugs({ drugs, q, prevYear, curYear }) {
                       {!unmatched && ` · ${num(d.price)} บาท/course`}
                     </div>
                   </td>
-                  {prevYear && <td className="px-4 py-3 text-right">{num(get(d, prevYear, 'vs_uc'))}</td>}
-                  <td className="px-4 py-3 text-right">{num(get(d, curYear, 'vs_uc'))}</td>
-                  {prevYear && <td className="whitespace-nowrap px-4 py-3 text-right">{num(get(d, prevYear, 'kpi_value'))}</td>}
-                  <td className="whitespace-nowrap px-4 py-3 text-right font-semibold">{num(get(d, curYear, 'kpi_value'))}</td>
-                  {prevYear && (
-                    <td className="px-4 py-3 text-right">
-                      {unmatched ? '-' : <Change prev={get(d, prevYear, 'kpi_value')} cur={get(d, curYear, 'kpi_value')} />}
+                  {years.map((y) => (
+                    <td key={y} className="px-4 py-3 text-right">
+                      {num(get(d, y, 'vs_uc'))}
                     </td>
-                  )}
+                  ))}
+                  {years.map((y) => (
+                    <td key={y} className={`whitespace-nowrap px-4 py-3 text-right ${y === curYear ? 'font-semibold' : ''}`}>
+                      {num(get(d, y, 'kpi_value'))}
+                    </td>
+                  ))}
+                  {pairs.map(([a, b]) => (
+                    <td key={`${a}-${b}`} className="px-4 py-3 text-right">
+                      {unmatched ? '-' : <Change prev={get(d, a, 'kpi_value')} cur={get(d, b, 'kpi_value')} />}
+                    </td>
+                  ))}
                 </tr>
               );
             })}
@@ -599,8 +666,7 @@ function HospDrugs({ drugs, q, prevYear, curYear }) {
           <DrugTotalRow
             label={`รวม (${num(rows.length)} รหัส)`}
             sums={sumByYear(rows, ['vs_uc', 'kpi_value'])}
-            prevYear={prevYear}
-            curYear={curYear}
+            years={years}
             before={4}
           />
         </table>
@@ -610,7 +676,8 @@ function HospDrugs({ drugs, q, prevYear, curYear }) {
 }
 
 // รหัส 24 หลักที่ไม่พบในไฟล์รหัสยาแผนไทย 24 หลัก — แยกแสดงต่างหาก
-function NotFound24({ items, q, prevYear, curYear }) {
+function NotFound24({ items, q, years }) {
+  const curYear = years[years.length - 1];
   const total = items.total ?? items.length;
   const isHosp = q.view === 'hosp';
   const get = (d, y, f) => d.byYear[y]?.[f] || 0;
@@ -640,8 +707,11 @@ function NotFound24({ items, q, prevYear, curYear }) {
                 <th className="px-4 py-3 font-semibold">รหัส 24 หลัก</th>
                 <th className="px-4 py-3 font-semibold">กลุ่มยา (11 หลัก)</th>
                 {!isHosp && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">หน่วยบริการ</th>}
-                {prevYear && <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC {prevYear}</th>}
-                <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC {curYear}</th>
+                {years.map((y) => (
+                  <th key={y} className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                    ครั้ง UC {y}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -657,19 +727,21 @@ function NotFound24({ items, q, prevYear, curYear }) {
                   </td>
                   {!isHosp && (
                     <td className="px-4 py-2 text-right">
-                      {num(Math.max(get(d, prevYear, 'hosp_count'), get(d, curYear, 'hosp_count')))}
+                      {num(Math.max(...years.map((y) => get(d, y, 'hosp_count'))))}
                     </td>
                   )}
-                  {prevYear && <td className="px-4 py-2 text-right">{num(get(d, prevYear, 'vs_uc'))}</td>}
-                  <td className="px-4 py-2 text-right">{num(get(d, curYear, 'vs_uc'))}</td>
+                  {years.map((y) => (
+                    <td key={y} className="px-4 py-2 text-right">
+                      {num(get(d, y, 'vs_uc'))}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
             <DrugTotalRow
               label={`รวมทั้งหมด (${num(total)} รหัส)`}
               sums={items.sums || sumByYear(items, ['vs_uc', 'kpi_value'])}
-              prevYear={prevYear}
-              curYear={curYear}
+              years={years}
               before={isHosp ? 3 : 4}
               showChange={false}
               showValue={false}

@@ -1,7 +1,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { PREF_COOKIE, getDatasets, parsePrefs } from '@/lib/kpi';
+import { PREF_COOKIE, YEARS_COOKIE, availableYears, getDatasets, parsePrefs, parseYears } from '@/lib/kpi';
 import { ensureImported, fetchInProgress, runFetchNow } from '@/lib/scheduler';
 import { checkCode } from '@/lib/confirm-code';
 import kpiLib from '@/scripts/kpi-lib';
@@ -24,6 +24,20 @@ export async function selectFile(prevState, formData) {
     ensureImported(year, target);
     return { ok: true, preparing: target };
   }
+  return { ok: true };
+}
+
+// เลือกปีที่จะเทียบ (อย่างน้อย 2 ปี) — เก็บใน cookie ของเบราว์เซอร์, reset = กลับไปใช้ค่าเริ่มต้น
+export async function selectYears(prevState, formData) {
+  const store = await cookies();
+  if (formData.get('reset')) {
+    store.delete(YEARS_COOKIE);
+    return { ok: true };
+  }
+  const all = availableYears();
+  const years = parseYears(formData.getAll('year')).filter((y) => all.includes(y));
+  if (years.length < 2) return { error: 'กรุณาเลือกอย่างน้อย 2 ปี' };
+  store.set(YEARS_COOKIE, years.join(','), { maxAge: 365 * 24 * 3600, path: '/', sameSite: 'lax', httpOnly: true });
   return { ok: true };
 }
 

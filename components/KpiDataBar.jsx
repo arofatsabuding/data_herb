@@ -47,6 +47,57 @@ function YearSelect({ y, action }) {
   );
 }
 
+// เลือกปีที่จะเทียบ (ติ๊กอย่างน้อย 2 ปี) — ค่าเริ่มต้น = ปีล่าสุดตาม KPI_COMPARE_YEARS
+function YearCompare({ compare, action }) {
+  const [state, formAction, pending] = useActionState(action, null);
+  const [checked, setChecked] = useState(compare.selected);
+  const toggle = (y) => setChecked((c) => (c.includes(y) ? c.filter((x) => x !== y) : [...c, y].sort((a, b) => a - b)));
+  const same = (a, b) => a.length === b.length && a.every((y, i) => y === b[i]);
+  const changed = !same(checked, compare.selected);
+  return (
+    <div className="mb-4 flex flex-col gap-2 border-b border-gray-100 pb-4 text-sm text-gray-600 sm:flex-row sm:flex-wrap sm:items-center">
+      <form action={formAction} className="flex flex-wrap items-center gap-2">
+        <span>เทียบปีงบประมาณ:</span>
+        {compare.all.map((y) => (
+          <label
+            key={y}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-1.5 ${
+              checked.includes(y) ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <input
+              type="checkbox"
+              name="year"
+              value={y}
+              checked={checked.includes(y)}
+              onChange={() => toggle(y)}
+              className="accent-emerald-600"
+            />
+            {y}
+          </label>
+        ))}
+        <button
+          type="submit"
+          disabled={pending || !changed || checked.length < 2}
+          className="btn-primary px-4 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {pending ? 'กำลังเปลี่ยน…' : 'เทียบ'}
+        </button>
+      </form>
+      {compare.custom && (
+        <form action={formAction}>
+          <input type="hidden" name="reset" value="1" />
+          <button type="submit" disabled={pending} className="text-xs text-emerald-700 underline hover:text-emerald-900">
+            กลับค่าเริ่มต้น ({compare.defaultYears.join(' · ')})
+          </button>
+        </form>
+      )}
+      {checked.length < 2 && <span className="text-xs text-amber-700">เลือกอย่างน้อย 2 ปี</span>}
+      {state?.error && <span className="text-xs text-rose-600">{state.error}</span>}
+    </div>
+  );
+}
+
 // ปุ่มดึงรายงาน ณ ปัจจุบัน → ตรวจว่ามีคนดึงอยู่ไหม → กรอกรหัสยืนยัน → ตกลง
 function FetchNow({ fetching, checkAction, fetchAction }) {
   const router = useRouter();
@@ -130,9 +181,12 @@ function FetchNow({ fetching, checkAction, fetchAction }) {
   );
 }
 
-export default function KpiDataBar({ years, fetching, roundText, selectAction, checkAction, fetchAction }) {
+export default function KpiDataBar({ compare, compareAction, years, fetching, roundText, selectAction, checkAction, fetchAction }) {
   return (
     <div className="card mb-6 p-5">
+      {compare.all.length > 2 && (
+        <YearCompare key={compare.selected.join()} compare={compare} action={compareAction} />
+      )}
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row">
           {years.map((y) => (

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import ExcelButton from '@/components/ExcelButton';
 import KpiSummary from '@/components/KpiSummary';
 import { getBreakdown, getStats } from '@/lib/drugs';
-import { PREF_COOKIE, kpiAvailable, parsePrefs, resolveSets } from '@/lib/kpi';
+import { kpiAvailable, setsFromCookies } from '@/lib/kpi';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +60,7 @@ function BreakdownTable({ id, title, rows, param = 'q' }) {
 export default async function StatsPage() {
   const s = getStats();
   // ตัวชี้วัดใช้ไฟล์ตามที่ผู้ใช้คนนี้เลือกไว้ในหน้า /kpi (ไฟล์ที่ยังไม่ได้นำเข้า → ใช้ไฟล์ที่มี)
-  const sets = kpiAvailable() ? resolveSets(parsePrefs((await cookies()).get(PREF_COOKIE)?.value)) : [];
+  const sets = kpiAvailable() ? setsFromCookies(await cookies()) : [];
   const rows = [
     ['รายการทั้งหมด', s.total],
     ['พบ TTMTID ใน Master', s.in_master],
