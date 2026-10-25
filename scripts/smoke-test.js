@@ -85,6 +85,19 @@ async function main() {
     assert(JSON.stringify(d).includes(code24), 'รายละเอียดยาไม่ตรงกับรหัสที่ค้น');
     return `${j.total} รายการ, ${code24}`;
   });
+  await check('POST /api/v1/drugs/check (ตรวจรายการยาจาก HIS)', async () => {
+    const res = await fetch(BASE + '/api/v1/drugs/check', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ items: [{ code24, local_code: 'A' }, { code24: '123', local_code: 'B' }] }),
+    });
+    assert(res.status === 200, `HTTP ${res.status}`);
+    const j = await res.json();
+    assert(j.summary?.total === 2, 'summary.total ไม่ใช่ 2');
+    assert(j.results[0].issues.every((i) => i.code !== 'NOT_IN_DTAM24'), `${code24} ควรพบในไฟล์รหัส 24 หลัก`);
+    assert(j.results[1].status === 'error', 'รหัส "123" ควรเป็น error');
+    return `${j.results[0].status} / ${j.results[1].status}`;
+  });
   await check('GET /api/v1/drug-groups', async () => {
     const j = await getJson('/api/v1/drug-groups');
     assert(JSON.stringify(j).length > 100, 'ไม่มีข้อมูล Drug Group');
@@ -118,6 +131,7 @@ async function main() {
     const list = await call({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
     const n = list.result?.tools?.length;
     assert(n > 0, 'tools/list ว่าง');
+    assert(!list.result.tools.some((t) => t.name.startsWith('kpi_')), 'MCP ต้องมีเฉพาะเครื่องมือข้อมูลยา');
     return `${n} tools`;
   });
 

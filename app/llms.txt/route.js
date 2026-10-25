@@ -1,5 +1,5 @@
 // /llms.txt — บอก AI ที่เข้ามาอ่านเว็บว่ามี API / MCP ให้ใช้
-import { TOOLS } from '@/lib/agent-tools';
+import { MCP_TOOLS } from '@/lib/agent-tools';
 import { publicOrigin } from '@/lib/api-http';
 import { ENDPOINTS } from '@/lib/openapi';
 
@@ -20,17 +20,19 @@ export function GET(request) {
 
 ## REST endpoints
 
-${ENDPOINTS.map((e) => `- GET ${o}/api/v1${e.path} — ${e.summary}`).join('\n')}
+${ENDPOINTS.map((e) => `- ${(e.method || 'get').toUpperCase()} ${o}/api/v1${e.path} — ${e.summary}`).join('\n')}
 
-## MCP tools
+## MCP tools (เฉพาะข้อมูลยา — ตัวชี้วัดใช้ผ่าน REST)
 
-${TOOLS.map((t) => `- ${t.name}: ${t.description}`).join('\n')}
+${MCP_TOOLS.map((t) => `- ${t.name}: ${t.description}`).join('\n')}
 
 ## ตัวอย่าง
 
 - รหัส 24 หลักนี้มี TTMTID อะไร → GET ${o}/api/v1/drugs/<รหัส 24 หลัก>
 - ผลงานหน่วยบริการ 11442 → GET ${o}/api/v1/kpi/hosp/11442
 - หารหัสหน่วยบริการจากชื่อ → GET ${o}/api/v1/kpi/areas?q=<ชื่อ>
+- ตรวจรายการยาจาก HIS → POST ${o}/api/v1/drugs/check  body: {"items": [{"code24": "...", "ttmtid": "...", "local_code": "..."}]}
+  (ทดสอบเร็ว: GET ${o}/api/v1/drugs/check?codes=<รหัส1>,<รหัส2>)
 `;
   return new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' } });
 }

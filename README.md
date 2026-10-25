@@ -22,7 +22,7 @@
 | ผู้ดูแลระบบ | `/admin` | อัปโหลดไฟล์อ้างอิง / ดาวน์โหลดไฟล์ระบบ (ต้องใส่รหัส) |
 | (footer) API / MCP | `/api-docs` | วิธีให้ AI หรือระบบอื่นดึงข้อมูล |
 
-ทุกตารางมีปุ่ม **ดาวน์โหลด Excel** · ปุ่ม **ถาม AI** มุมขวาล่างจะแสดงเมื่อตั้ง `ANTHROPIC_API_KEY`
+ทุกตารางมีปุ่ม **ดาวน์โหลด Excel**
 
 ## ติดตั้งบนเครื่องทีม (หลัง clone)
 
@@ -37,7 +37,7 @@ cp .env.example .env      # Windows: copy .env.example .env
 
 `npm run dev` ไม่ดึงข้อมูลอัตโนมัติ 22:00 (ดึงเฉพาะเซิร์ฟเวอร์จริงที่รัน `npm start`) — ไม่ต้องตั้งอะไรเพิ่ม
 
-รหัสต่าง ๆ (`FETCH_NOW_CODE`, `ADMIN_CODE`, `ADMIN_PAGE_CODE`, `ANTHROPIC_API_KEY`) ขอจากผู้ดูแลโปรเจกต์ — ไม่ต้องใส่ก็รันได้ แต่ปุ่มที่ต้องใช้รหัส/แชท AI จะใช้ไม่ได้
+รหัสต่าง ๆ (`FETCH_NOW_CODE`, `ADMIN_CODE`, `ADMIN_PAGE_CODE`) ขอจากผู้ดูแลโปรเจกต์ — ไม่ต้องใส่ก็รันได้ แต่ปุ่มที่ต้องใช้รหัสจะใช้ไม่ได้
 
 สร้างฐานข้อมูล (ไม่อยู่ใน git) แล้วเปิดเว็บ:
 
@@ -140,14 +140,30 @@ git push -u origin feat/<เรื่องที่ทำ> && gh pr create
 
 | ช่องทาง | URL | ใช้กับ |
 |---|---|---|
-| MCP server (Streamable HTTP) | `/api/mcp` | Claude (Settings → Connectors → Add custom connector), Claude Code: `claude mcp add --transport http herb-center https://herb.thaipadi.com/api/mcp` |
+| MCP server (Streamable HTTP) — **เฉพาะข้อมูลยา** | `/api/mcp` | Claude (Settings → Connectors → Add custom connector), Claude Code: `claude mcp add --transport http herb-center https://herb.thaipadi.com/api/mcp` |
 | REST API (JSON) | `/api/v1`, เอกสาร `/api/v1/openapi.json` | ChatGPT Actions, สคริปต์, ระบบอื่น |
 | llms.txt | `/llms.txt` | AI ที่เข้ามาอ่านเว็บ |
-| แชทในเว็บ | `/api/chat` + ปุ่ม "ถาม AI" | ผู้ใช้เว็บ (Claude Opus 5.5, จำกัด 20 ข้อความ/IP/ชม. และ 500/วัน) |
 
 ตัวอย่าง: `GET /api/v1/drugs/<รหัส 24 หลัก>` · `GET /api/v1/kpi/hosp/11442` · `GET /api/v1/kpi/areas?q=สารภี` · `GET /api/v1/kpi?level=province&code=50`
 
-ทั้ง 3 ช่องทางใช้เครื่องมือชุดเดียวกันใน `lib/agent-tools.js`
+ทั้ง 2 ช่องทางใช้เครื่องมือชุดเดียวกันใน `lib/agent-tools.js` — REST มีครบทุกตัว ส่วน MCP มีเฉพาะเครื่องมือข้อมูลยา (`group: 'drug'`)
+
+> แชท "ถาม AI" ในเว็บเอาออกแล้ว (2026-10-25) เพราะมีค่าใช้จ่ายต่อข้อความ — โค้ดเดิมดูได้ใน git history (`app/api/chat/route.js`, `components/ChatWidget.jsx`, `lib/chat-limit.js`)
+
+### ตรวจรายการยาจาก HIS ของโรงพยาบาล
+
+HIS ส่งรายการยาสมุนไพรในคลังยามาตรวจได้ครั้งละไม่เกิน 1,000 รายการ ระบบไม่บันทึกข้อมูลที่ส่งมา ใช้ได้ทั้ง REST `POST /api/v1/drugs/check` และ MCP tool `check_drug_list` (ตรรกะอยู่ที่ `lib/drug-check.js`)
+
+```bash
+curl -X POST https://herb.thaipadi.com/api/v1/drugs/check -H "Content-Type: application/json" \
+  -d '{"items": [{"code24": "<รหัส 24 หลัก>", "ttmtid": "<TTMTID ใน HIS>", "local_code": "<รหัสยา รพ.>"}]}'
+```
+
+แต่ละรายการได้ `status` เป็น ok / warning / error พร้อม `issues`
+- **error** (กระทบตัวชี้วัด): `FORMAT` ไม่ใช่ 24 หลัก · `NOT_IN_DTAM24` ไม่พบในไฟล์รหัส 24 หลัก (นับเป็นรหัสยาที่ผิดพลาด) · `NO_KPI_GROUP` 11 หลักแรกไม่อยู่ในกลุ่มยา (มูลค่า 0 บาท)
+- **warning** (ข้อมูลยังไม่ครบ): `DIRTY_CODE` มีอักขระอื่นปน · `NO_TTMTID` · `TTMTID_MISMATCH` · `NOT_IN_TTMT_MASTER` · `NO_DRUG_GROUP`
+
+`summary.code_error_rate_pct` คำนวณแบบเดียวกับอัตรารหัสยาที่ผิดพลาดในหน้าตัวชี้วัด
 
 ## ตั้งค่า (.env)
 
@@ -158,8 +174,6 @@ git push -u origin feat/<เรื่องที่ทำ> && gh pr create
 | `FETCH_NOW_CODE` | (ไม่ตั้ง = ปุ่มใช้ไม่ได้) | รหัสยืนยันปุ่ม "ดึงรายงาน ณ ปัจจุบัน" |
 | `ADMIN_PAGE_CODE` | ค่าในโค้ด | รหัสเข้าเมนูผู้ดูแลระบบ — **เซิร์ฟเวอร์จริงควรตั้งเสมอ** |
 | `ADMIN_CODE` | ใช้ `FETCH_NOW_CODE` | รหัสยืนยันการอัปโหลดไฟล์อ้างอิง |
-| `ANTHROPIC_API_KEY` | (ไม่ตั้ง = ไม่มีปุ่มแชท) | key ของ Claude สำหรับแชท AI (มีค่าใช้จ่าย) |
-| `CHAT_MODEL` / `CHAT_PER_IP` / `CHAT_PER_DAY` / `CHAT_ENABLED` | `claude-opus-5-5` / 20 / 500 / เปิด | โมเดล, โควตาแชท, `0` = ปิดแชทชั่วคราว |
 | `OPENDATA_CRON` | เปิดเฉพาะ `npm start` | `on` / `off` = บังคับเปิด/ปิดการดึงอัตโนมัติ |
 | `OPENDATA_CRON_TIME` | `0 22 * * *` | เวลาดึง (cron) |
 | `OPENDATA_FETCH_YEAR` / `OPENDATA_FALLBACK_YEAR` | `auto` / 2569 | ปีที่ดึง / ปีที่ใช้แทนเมื่อยังไม่มีข้อมูล (`none` = ไม่ดึง) |
@@ -170,10 +184,10 @@ git push -u origin feat/<เรื่องที่ทำ> && gh pr create
 ```
 app/                 หน้าเว็บ + API (Next.js App Router)
   search/ drug/[id]/ groups/ kpi/ stats/ admin/ api-docs/
-  api/v1/ api/mcp/ api/chat/      REST API / MCP / แชท AI
+  api/v1/ api/mcp/                REST API / MCP
   api/export/ api/kpi/ api/admin/ ดาวน์โหลด Excel / ไฟล์ระบบ
   llms.txt/
-components/          ส่วนประกอบหน้าเว็บ (ExcelButton, ChatWidget, NavLinks, Kpi*, …)
+components/          ส่วนประกอบหน้าเว็บ (ExcelButton, NavLinks, Kpi*, …)
 lib/                 drugs.js, kpi.js, agent-tools.js, scheduler.js, excel.js, db.js, …
 scripts/             import.js + schema.sql, import-kpi.js + kpi-lib.js, fetch-opendata.js, reference-files.js
 publicfiles/         ไฟล์ Excel ต้นทาง (opendata-2570/*.xlsx ไม่อยู่ใน git)

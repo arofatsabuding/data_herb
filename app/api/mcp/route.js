@@ -1,16 +1,19 @@
-// MCP server (Streamable HTTP แบบ stateless) — ให้ Claude / AI อื่นที่รองรับ MCP เรียกเครื่องมือชุดเดียวกับ REST API
+// MCP server (Streamable HTTP แบบ stateless) — ให้ Claude / AI อื่นที่รองรับ MCP เรียกเครื่องมือข้อมูลยา (MCP_TOOLS)
+// ไม่เปิดเครื่องมือตัวชี้วัดทาง MCP — ใช้ผ่าน REST API แทน
 // เพิ่มใน client ด้วย URL: https://<โดเมน>/api/mcp  (ไม่ต้องใช้ key)
-import { TOOLS, ToolError, runTool } from '@/lib/agent-tools';
+import { MCP_TOOLS, ToolError, runTool } from '@/lib/agent-tools';
 import { CORS, json, preflight } from '@/lib/api-http';
 
 export const dynamic = 'force-dynamic';
 
 const SUPPORTED_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
-const SERVER_INFO = { name: 'herb-center', title: 'HERB Center — รหัสยาสมุนไพรและตัวชี้วัด', version: '1.0.0' };
+const SERVER_INFO = { name: 'herb-center', title: 'HERB Center — รหัสยาสมุนไพร/ยาแผนไทย', version: '1.1.0' };
 const INSTRUCTIONS =
-  'ข้อมูลรหัสยาแผนไทย 24 หลัก + TTMT Master + Drug Group และตัวชี้วัด "มูลค่ายาสมุนไพรในสิทธิ UC" รายหน่วยบริการ/พื้นที่ ' +
-  'ถามรหัส 24 หลัก → get_drug_by_code24; ถามผลงานหน่วยบริการ → kpi_report (ถ้ารู้แค่ชื่อ ใช้ kpi_find_area หารหัสก่อน) ' +
-  'ตอบจากข้อมูลที่เครื่องมือคืนมาเท่านั้น และบอกปี/ไฟล์ข้อมูลที่ใช้ — ถ้า datasets มี warning ต้องแจ้งผู้ใช้ด้วย';
+  'ข้อมูลรหัสยาแผนไทย 24 หลัก (กรมการแพทย์แผนไทยฯ) + TTMT Master (สมสท.) + Drug Group และอัตราเบิก ' +
+  'ถามรหัส 24 หลัก → get_drug_by_code24; ค้นจากชื่อ → search_drugs; ' +
+  'ตรวจรายการยาจาก HIS ว่าข้อมูลครบถ้วน → check_drug_list ' +
+  'ตอบจากข้อมูลที่เครื่องมือคืนมาเท่านั้น';
+const MCP_NAMES = new Set(MCP_TOOLS.map((t) => t.name));
 
 const result = (id, res) => ({ jsonrpc: '2.0', id, result: res });
 const failure = (id, code, message) => ({ jsonrpc: '2.0', id: id ?? null, error: { code, message } });
@@ -34,7 +37,7 @@ function handle(msg) {
       return result(id, {});
     case 'tools/list':
       return result(id, {
-        tools: TOOLS.map(({ name, description, inputSchema }) => ({
+        tools: MCP_TOOLS.map(({ name, description, inputSchema }) => ({
           name,
           description,
           inputSchema,
@@ -42,6 +45,7 @@ function handle(msg) {
         })),
       });
     case 'tools/call': {
+      if (!MCP_NAMES.has(params.name)) return failure(id, -32602, `ไม่มีเครื่องมือ ${params.name}`);
       try {
         const data = runTool(params.name, params.arguments);
         return result(id, { content: [{ type: 'text', text: JSON.stringify(data) }], structuredContent: data });

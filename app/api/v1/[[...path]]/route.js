@@ -1,4 +1,4 @@
-// REST API สำหรับระบบภายนอก / AI agent — อ่านอย่างเดียว ไม่ต้องใช้ key
+// REST API สำหรับระบบภายนอก / AI agent — อ่านอย่างเดียว ไม่ต้องใช้ key (POST ใช้ส่งรายการยามาตรวจ ไม่บันทึกข้อมูล)
 // ทุก endpoint เรียกเครื่องมือชุดเดียวกับ MCP (lib/agent-tools.js) เอกสารอยู่ที่ /api/v1/openapi.json
 import { ToolError, runTool } from '@/lib/agent-tools';
 import { json, preflight, publicOrigin } from '@/lib/api-http';
@@ -11,6 +11,7 @@ function route(path) {
   const [a, b, c, ...rest] = path;
   if (rest.length) return null;
   if (a === 'drugs' && !b) return ['search_drugs', {}];
+  if (a === 'drugs' && b === 'check' && !c) return ['check_drug_list', {}];
   if (a === 'drugs' && b && !c) return ['get_drug_by_code24', { code24: b }];
   if (a === 'ttmt' && b && !c) return ['get_drugs_by_ttmtid', { ttmtid: b }];
   if (a === 'drug-groups' && !b) return ['list_drug_groups', {}];
@@ -35,7 +36,7 @@ export async function GET(request, { params }) {
       description: 'ข้อมูลรหัสยาแผนไทย 24 หลัก + TTMT Master + Drug Group และตัวชี้วัดมูลค่ายาสมุนไพรในสิทธิ UC',
       openapi: `${origin}/api/v1/openapi.json`,
       mcp: `${origin}/api/mcp`,
-      endpoints: ENDPOINTS.map((e) => ({ path: `/api/v1${e.path}`, summary: e.summary })),
+      endpoints: ENDPOINTS.map((e) => ({ method: (e.method || 'get').toUpperCase(), path: `/api/v1${e.path}`, summary: e.summary })),
     });
   }
   if (path.length === 1 && path[0] === 'openapi.json') return json(buildOpenApi(origin));
@@ -47,13 +48,33 @@ export async function GET(request, { params }) {
   const alias = QUERY_ALIAS[tool] || {};
   const args = {};
   for (const [k, v] of request.nextUrl.searchParams) if (v !== '') args[alias[k] || k] = v;
+  return run(tool, { ...args, ...fromPath });
+}
+
+function run(tool, args) {
   try {
-    return json(runTool(tool, { ...args, ...fromPath }));
+    return json(runTool(tool, args));
   } catch (e) {
     if (e instanceof ToolError) return json({ error: e.message }, e.status);
     console.error('[api/v1]', e);
     return json({ error: 'เกิดข้อผิดพลาดภายในระบบ' }, 500);
   }
+}
+
+// POST เฉพาะ endpoint ที่รับข้อมูลชุดใหญ่ — ตอนนี้มี /drugs/check (HIS ส่งรายการยามาตรวจ)
+const POST_TOOLS = { 'drugs/check': 'check_drug_list' };
+
+export async function POST(request, { params }) {
+  const tool = POST_TOOLS[((await params).path ?? []).join('/')];
+  if (!tool) return json({ error: 'endpoint นี้รับเฉพาะ GET — ดูรายการที่ /api/v1' }, 405);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'body ต้องเป็น JSON เช่น {"items": [{"code24": "..."}]}' }, 400);
+  }
+  // รับทั้ง {"items": [...]} และ [...] ตรง ๆ
+  return run(tool, Array.isArray(body) ? { items: body } : body && typeof body === 'object' ? body : {});
 }
 
 export const OPTIONS = preflight;

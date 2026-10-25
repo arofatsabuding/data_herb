@@ -4,11 +4,9 @@ import '@fontsource/sarabun/600.css';
 import '@fontsource/sarabun/700.css';
 import './globals.css';
 import { Suspense } from 'react';
-import ChatWidget from '@/components/ChatWidget';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import NavProgress from '@/components/NavProgress';
-import { chatEnabled } from '@/lib/chat-limit';
 
 export const metadata = {
   title: 'HERB Center — ค้นหารหัสยาสมุนไพร',
@@ -25,7 +23,6 @@ export default function RootLayout({ children }) {
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
-        {chatEnabled() && <ChatWidget />}
       </body>
     </html>
   );

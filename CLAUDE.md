@@ -8,7 +8,7 @@
 **HERB Center** — เว็บค้นหารหัสยาสมุนไพร/ยาแผนไทย (Next.js 15 + SQLite) ของทีม DTAM
 - รวม **รหัสยาแผนไทย 24 หลัก** (กรมการแพทย์แผนไทยฯ) กับ **TTMT Master** (สมสท.) → TTMTID, Drug Group, อัตราเบิกต่อ course
 - **ตัวชี้วัด "มูลค่ายาสมุนไพรในสิทธิ UC"** เทียบ 2 ปีงบประมาณล่าสุด หรือปีที่ผู้ใช้เลือกเอง (cookie `kpi_years`) ระดับประเทศ/เขต/จังหวัด/อำเภอ/หน่วยบริการ จากข้อมูล opendata.moph.go.th (ดึงอัตโนมัติทุกวัน 22:00)
-- เปิดให้ AI ใช้: REST API `/api/v1`, MCP server `/api/mcp`, แชท "ถาม AI" ในเว็บ (`/api/chat`)
+- เปิดให้ AI/ระบบอื่นใช้: REST API `/api/v1` (ข้อมูลยา + ตัวชี้วัด), MCP server `/api/mcp` (**เฉพาะข้อมูลยา**) · แชท "ถาม AI" เอาออกแล้วเพราะมีค่าใช้จ่าย — อย่าเพิ่มกลับโดยไม่ถามเจ้าของโปรเจกต์
 - เว็บจริง: https://herb.thaipadi.com (Cloudflare Tunnel → `next start` พอร์ต 4000 บนเครื่องผู้ดูแลโปรเจกต์) · repo: github.com/arofatsabuding/data_herb (private)
 - ผู้ใช้และทีมสื่อสารเป็น **ภาษาไทย** — ตอบเป็นภาษาไทย ข้อความบนหน้าเว็บเป็นภาษาไทย คอมเมนต์ในโค้ดเป็นภาษาไทย
 
@@ -48,12 +48,13 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 | `app/kpi` (+ `actions.js`) | เมนู **ตัวชี้วัด** — เลือกระดับพื้นที่, เลือกปีที่เทียบ (cookie `kpi_years`), เลือกไฟล์ข้อมูลแต่ละปี (cookie `kpi_files`), ปุ่มดึงรายงาน |
 | `app/stats` | เมนู **สรุป** — สรุปตัวชี้วัดระดับประเทศ + สถิติฐานข้อมูลยา |
 | `app/admin` | **ผู้ดูแลระบบ** — อัปโหลดไฟล์อ้างอิง, ดาวน์โหลดไฟล์ระบบ (ต้องใส่รหัส, cookie 8 ชม.) |
-| `app/api/v1/[[...path]]`, `app/api/mcp`, `app/api/chat` | REST API / MCP / แชท AI — ทั้งหมดเรียกเครื่องมือชุดเดียวกันใน `lib/agent-tools.js` |
+| `app/api/v1/[[...path]]`, `app/api/mcp` | REST API / MCP — เรียกเครื่องมือชุดเดียวกันใน `lib/agent-tools.js` (MCP ใช้เฉพาะ `MCP_TOOLS` = group `drug`) |
 | `app/api/export`, `app/api/kpi/not-found-24` | ดาวน์โหลด Excel ข้อมูลทั้งหมด (เกินที่แสดงบนหน้า) |
 | `app/llms.txt`, `app/api-docs` | บอก AI/คนว่ามี API อะไร |
 | `lib/drugs.js` | query ข้อมูลยา (`drug_lookup` ใน herb.db) |
+| `lib/drug-check.js` | ตรวจรายการยาที่ HIS ส่งมา (`POST /api/v1/drugs/check`, MCP `check_drug_list`) — กติกาเดียวกับตัวชี้วัด |
 | `lib/kpi.js` | query ตัวชี้วัด (kpi.db) — `resolveSets`, `getCompareReport`, `getCodeErrors`, `EXCLUDED_ZONES` |
-| `lib/agent-tools.js` | เครื่องมือ 8 ตัวสำหรับ AI (`search_drugs`, `get_drug_by_code24`, `kpi_report`, `kpi_find_area`, …) — **แก้ที่นี่ที่เดียว** REST/MCP/แชทได้ผลพร้อมกัน; `lib/openapi.js` สร้างเอกสารจาก schema ของเครื่องมือ |
+| `lib/agent-tools.js` | เครื่องมือ 9 ตัวสำหรับ AI (`search_drugs`, `get_drug_by_code24`, `check_drug_list`, `kpi_report`, `kpi_find_area`, …) — **แก้ที่นี่ที่เดียว** REST/MCP ได้ผลพร้อมกัน · ทุกตัวต้องมี `group: 'drug' | 'kpi'` (kpi ไม่ออก MCP); `lib/openapi.js` สร้างเอกสารจาก schema ของเครื่องมือ |
 | `lib/scheduler.js` + `instrumentation.js` | ตั้งเวลาดึง opendata 22:00 (เฉพาะ `npm start`), retry 5 ครั้ง, ล็อก `data/fetch.lock` |
 | `scripts/smoke-test.js`, `.github/` | smoke test, CI (GitHub Actions), PR template |
 | `lib/nav.js`, `components/NavLinks.jsx` | เมนูหลัก (ไฮไลต์เมนูที่เปิดอยู่) |
@@ -85,8 +86,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 ## สิ่งที่ห้าม / ต้องระวัง
 
 - ห้าม commit `.env`, `data/*.db`, `logs/`, `publicfiles/opendata-2570/*.xlsx` (อยู่ใน `.gitignore` แล้ว) และห้ามใส่รหัสผ่าน/API key ลงในโค้ดหรือเอกสาร
-- รหัสต่าง ๆ อยู่ใน `.env`: `FETCH_NOW_CODE`, `ADMIN_CODE`, `ADMIN_PAGE_CODE`, `ANTHROPIC_API_KEY` — ถามเจ้าของโปรเจกต์ ส่งกันทางช่องทางส่วนตัว ห้ามโพสต์ใน issue/PR/แชทกลุ่ม · เครื่องทีมไม่มีรหัสเหล่านี้ก็พัฒนาได้
-- แชท AI มีค่าใช้จ่ายจริงต่อข้อความ — อย่าทดสอบวนซ้ำ ๆ กับ key จริง (ทดสอบด้วย key ปลอมได้ ระบบจะตอบ error ที่ควบคุมไว้)
+- รหัสต่าง ๆ อยู่ใน `.env`: `FETCH_NOW_CODE`, `ADMIN_CODE`, `ADMIN_PAGE_CODE` — ถามเจ้าของโปรเจกต์ ส่งกันทางช่องทางส่วนตัว ห้ามโพสต์ใน issue/PR/แชทกลุ่ม · เครื่องทีมไม่มีรหัสเหล่านี้ก็พัฒนาได้
 - PowerShell 5.1 `Set-Content -Encoding utf8` ใส่ BOM หน้าไฟล์ — ใช้เครื่องมือแก้ไฟล์ของ Claude หรือ Bash แทน
 - ไฟล์ใช้ LF (`.gitattributes`) — คำเตือน CRLF ตอน `git add` บน Windows เป็นเรื่องปกติ
 - `instrumentation.js` ต้องคงรูปแบบ `if (process.env.NEXT_RUNTIME === 'nodejs') { await import(...) }` — ถ้าเขียนแบบ early return, `npm run dev` จะ bundle `lib/scheduler` (fs/path) ให้ edge runtime แล้วทุกหน้าตอบ 500
