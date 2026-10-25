@@ -21,7 +21,7 @@
 - อย่า import ค่าที่ไม่ใช่คอมโพเนนต์ (เช่น array) จากไฟล์ `'use client'` เข้า Server Component — ให้ย้ายไปไว้ใน `lib/` (ดู `lib/nav.js`)
 - ไฟล์ดาวน์โหลดทุกจุดเป็น **Excel (.xlsx) ไม่ใช่ CSV** — ใช้ `components/ExcelButton.jsx` (ฝั่งเบราว์เซอร์) หรือ `lib/excel.js` (`xlsxResponse` ฝั่งเซิร์ฟเวอร์) ทุกตารางใหม่ต้องมีปุ่ม Excel
 - ตารางที่แสดงตัวเลขต้องมี **แถวรวม** ท้ายตาราง
-- เขียนให้เหมือนโค้ดรอบ ๆ (ชื่อ, ความหนาแน่นของคอมเมนต์, สไตล์) — รัน `npm run lint` ก่อน commit
+- เขียนให้เหมือนโค้ดรอบ ๆ (ชื่อ, ความหนาแน่นของคอมเมนต์, สไตล์) — รัน `npm run check` ก่อน commit (`.editorconfig` กำหนด 2 ช่องว่าง, LF, UTF-8)
 
 ## คำสั่ง
 
@@ -30,14 +30,15 @@ npm install
 npm run import          # Excel ใน publicfiles/ → data/herb.db (ปิดเซิร์ฟเวอร์ก่อน: Windows ล็อกไฟล์)
 npm run import:kpi      # opendata-<ปี>/*.xlsx → data/kpi.db (ไม่ต้องปิดเซิร์ฟเวอร์)
 npm run fetch:opendata  # ดึงข้อมูลจาก opendata.moph.go.th → publicfiles/opendata-2570/ → kpi.db
-npm run dev             # http://localhost:3000 (เครื่องทีม)
-npm run build && npm start   # http://localhost:4000 (เซิร์ฟเวอร์จริง)
-npm run lint
+npm run dev             # http://localhost:3000 (เครื่องทีม) — build ไว้ที่ .next-dev
+npm run build && npm start   # http://localhost:4000 (เซิร์ฟเวอร์จริง) — build ไว้ที่ .next
+npm run check           # lint + build (ต้องผ่านก่อนเปิด PR — CI รันแบบเดียวกัน)
+npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของเว็บที่รันอยู่ (ค่าเริ่มต้น :3000, ใส่ -- http://localhost:4000 ได้)
 ```
 
-- **dev และ start ใช้โฟลเดอร์ `.next` เดียวกัน** — อย่ารัน `npm run dev` หรือ `npm run build` ในโฟลเดอร์ที่ `npm start` กำลังรันอยู่
-- บนเซิร์ฟเวอร์จริง: หยุด `npm start` → `npm run build` → เริ่ม `npm start` ใหม่ → เปิดหน้าเว็บตรวจว่า CSS โหลด (ถ้า build ทับตอนเซิร์ฟเวอร์รันอยู่ หน้าเว็บจะไม่มีสไตล์)
-- เครื่องทีมที่รัน dev ควรตั้ง `OPENDATA_CRON=off` ใน `.env` ไม่ให้ดึงข้อมูล 22:00 ซ้ำกับเซิร์ฟเวอร์จริง
+- `npm run dev` (`.next-dev`) กับ `npm start` (`.next`) แยกโฟลเดอร์กันแล้ว รัน dev บนเครื่องเซิร์ฟเวอร์จริงได้ แต่ **ห้ามรัน `npm run build` ตอน `npm start` รันอยู่** (ทับ `.next` → หน้าเว็บไม่มีสไตล์)
+- บนเซิร์ฟเวอร์จริง: หยุด `npm start` → `npm run build` → เริ่ม `npm start` ใหม่ → `npm run test:smoke -- http://localhost:4000`
+- ดึงข้อมูล 22:00 อัตโนมัติ **เฉพาะ `npm start`** — `npm run dev` ไม่ดึง (บังคับได้ด้วย `OPENDATA_CRON=on|off`)
 
 ## แผนที่โค้ด
 
@@ -53,7 +54,8 @@ npm run lint
 | `lib/drugs.js` | query ข้อมูลยา (`drug_lookup` ใน herb.db) |
 | `lib/kpi.js` | query ตัวชี้วัด (kpi.db) — `resolveSets`, `getCompareReport`, `getCodeErrors`, `EXCLUDED_ZONES` |
 | `lib/agent-tools.js` | เครื่องมือ 8 ตัวสำหรับ AI (`search_drugs`, `get_drug_by_code24`, `kpi_report`, `kpi_find_area`, …) — **แก้ที่นี่ที่เดียว** REST/MCP/แชทได้ผลพร้อมกัน; `lib/openapi.js` สร้างเอกสารจาก schema ของเครื่องมือ |
-| `lib/scheduler.js` + `instrumentation.js` | ตั้งเวลาดึง opendata 22:00, retry 5 ครั้ง, ล็อก `data/fetch.lock` |
+| `lib/scheduler.js` + `instrumentation.js` | ตั้งเวลาดึง opendata 22:00 (เฉพาะ `npm start`), retry 5 ครั้ง, ล็อก `data/fetch.lock` |
+| `scripts/smoke-test.js`, `.github/` | smoke test, CI (GitHub Actions), PR template |
 | `lib/nav.js`, `components/NavLinks.jsx` | เมนูหลัก (ไฮไลต์เมนูที่เปิดอยู่) |
 | `scripts/import.js` + `schema.sql` | สร้าง herb.db; `scripts/kpi-lib.js` + `import-kpi.js` สร้าง kpi.db; `scripts/reference-files.js` ชื่อไฟล์อ้างอิง + ตรวจรูปแบบไฟล์ที่อัปโหลด |
 
@@ -71,18 +73,21 @@ npm run lint
 - ไฟล์ในโฟลเดอร์ `opendata-2570/` ตอนนี้ยังเป็น **ข้อมูลปี 2569** (opendata ยังไม่มี 2570 — `fetchYear` ใน manifest) หน้าเว็บและ API ต้องเตือนเรื่องนี้เสมอ จะหายเองเมื่อดึงข้อมูล 2570 ได้จริง
 - ข้อมูลยาและตัวชี้วัดเปิดให้ทุกคนอ่าน (API/MCP ไม่ใช้ key) — ตัดสินใจแล้ว
 
-## ขั้นตอนทำงานร่วมกัน
+## ขั้นตอนทำงานร่วมกัน (git ปกติ)
 
-1. แตก branch จาก `main` (`feat/...`, `fix/...`, `docs/...`) — อย่า commit ตรงเข้า `main`
-2. แก้โค้ด → `npm run lint` → `npm run build` ต้องผ่าน → ทดสอบหน้าที่แก้จริงในเบราว์เซอร์
-3. commit ข้อความภาษาอังกฤษสั้น ๆ บอกว่าเปลี่ยนอะไร → push branch → เปิด PR (หรือ merge เข้า `main` ถ้าเจ้าของโปรเจกต์อนุญาต)
-4. งานจะถือว่า "เสร็จ" เมื่อ merge เข้า `main`, push แล้ว และเซิร์ฟเวอร์ :4000 build + restart แล้ว (เฉพาะเครื่องที่รันเว็บจริง)
-5. ถ้าเปลี่ยนพฤติกรรม/การตั้งค่า ให้อัปเดต README.md หรือ PLAN.md ในงานเดียวกัน
+1. `git checkout main && git pull` แล้วแตก branch (`feat/...`, `fix/...`, `docs/...`) — อย่า commit ตรงเข้า `main`
+2. แก้โค้ด → `npm run check` ผ่าน → `npm run dev` แล้วเปิดหน้าที่แก้ (`npm run test:smoke` ช่วยตรวจรวม)
+3. commit ข้อความภาษาอังกฤษสั้น ๆ → push branch → เปิด PR — CI (`.github/workflows/ci.yml`) ตรวจ lint + build + smoke test ให้อัตโนมัติ
+4. CI ผ่าน → merge เข้า `main` · แตะกติกาข้อมูล (หัวข้อด้านบน) ให้ถามเจ้าของโปรเจกต์ก่อน
+5. deploy บนเครื่องเซิร์ฟเวอร์จริง: `git pull` → หยุด `npm start` → `npm ci` (ถ้า package-lock เปลี่ยน) → `npm run build` → `npm start` → `npm run test:smoke -- http://localhost:4000`
+6. เปลี่ยนพฤติกรรม/การตั้งค่า → อัปเดต README.md หรือ PLAN.md ในงานเดียวกัน
 
 ## สิ่งที่ห้าม / ต้องระวัง
 
 - ห้าม commit `.env`, `data/*.db`, `logs/`, `publicfiles/opendata-2570/*.xlsx` (อยู่ใน `.gitignore` แล้ว) และห้ามใส่รหัสผ่าน/API key ลงในโค้ดหรือเอกสาร
-- รหัสต่าง ๆ อยู่ใน `.env`: `FETCH_NOW_CODE`, `ADMIN_CODE`, `ADMIN_PAGE_CODE`, `ANTHROPIC_API_KEY` — ถามเจ้าของโปรเจกต์ ไม่ต้องเดา
+- รหัสต่าง ๆ อยู่ใน `.env`: `FETCH_NOW_CODE`, `ADMIN_CODE`, `ADMIN_PAGE_CODE`, `ANTHROPIC_API_KEY` — ถามเจ้าของโปรเจกต์ ส่งกันทางช่องทางส่วนตัว ห้ามโพสต์ใน issue/PR/แชทกลุ่ม · เครื่องทีมไม่มีรหัสเหล่านี้ก็พัฒนาได้
 - แชท AI มีค่าใช้จ่ายจริงต่อข้อความ — อย่าทดสอบวนซ้ำ ๆ กับ key จริง (ทดสอบด้วย key ปลอมได้ ระบบจะตอบ error ที่ควบคุมไว้)
 - PowerShell 5.1 `Set-Content -Encoding utf8` ใส่ BOM หน้าไฟล์ — ใช้เครื่องมือแก้ไฟล์ของ Claude หรือ Bash แทน
 - ไฟล์ใช้ LF (`.gitattributes`) — คำเตือน CRLF ตอน `git add` บน Windows เป็นเรื่องปกติ
+- `instrumentation.js` ต้องคงรูปแบบ `if (process.env.NEXT_RUNTIME === 'nodejs') { await import(...) }` — ถ้าเขียนแบบ early return, `npm run dev` จะ bundle `lib/scheduler` (fs/path) ให้ edge runtime แล้วทุกหน้าตอบ 500
+- push ไฟล์ใน `.github/workflows/` ต้องมีสิทธิ์ `workflow` ใน token ของ gh — ถ้าถูกปฏิเสธ รัน `gh auth refresh -h github.com -s workflow`

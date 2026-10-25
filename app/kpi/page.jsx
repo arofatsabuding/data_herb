@@ -97,7 +97,7 @@ function dataOptions(sets, prefs) {
 // สถานะการดึงอัตโนมัติรอบล่าสุด
 const ROUND_STATUS = { ok: 'สำเร็จ', running: 'กำลังดึง', failed: 'ไม่สำเร็จ — รอดึงใหม่', no_report: 'ไม่มีรายงาน' };
 function roundText() {
-  if (!cronEnabled()) return 'ดึงข้อมูลอัตโนมัติ: ปิด (OPENDATA_CRON=off)';
+  if (!cronEnabled()) return 'ดึงข้อมูลอัตโนมัติ: ปิด (npm run dev หรือ OPENDATA_CRON=off)';
   const [date, r] = Object.entries(kpiLib.readFetchStatus().rounds).sort(([a], [b]) => b.localeCompare(a))[0] || [];
   const last = date
     ? ` · รอบล่าสุด ${new Date(`${date}T12:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'medium' })}: ${

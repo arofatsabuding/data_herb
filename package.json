@@ -2,6 +2,9 @@
   "name": "data_herb",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.18"
+  },
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
@@ -9,7 +12,9 @@
     "lint": "eslint .",
     "import": "node scripts/import.js",
     "import:kpi": "node --max-old-space-size=4096 scripts/import-kpi.js",
-    "fetch:opendata": "node --max-old-space-size=4096 scripts/fetch-opendata.js"
+    "fetch:opendata": "node --max-old-space-size=4096 scripts/fetch-opendata.js",
+    "check": "npm run lint && npm run build",
+    "test:smoke": "node scripts/smoke-test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

@@ -1,0 +1,53 @@
+# ตรวจทุก PR และทุกครั้งที่ push เข้า main: lint → สร้างฐานข้อมูลจากไฟล์ใน git → build → เปิดเว็บแล้วรัน smoke test
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# push ซ้ำใน branch เดิม → ยกเลิกรอบเก่า
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OPENDATA_CRON: 'off'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # ใช้ไฟล์ใน publicfiles/ ที่อยู่ใน git (opendata-2570 ไม่อยู่ใน git → มีแค่ปี 2569)
+      - name: สร้าง herb.db
+        run: npm run import
+      - name: สร้าง kpi.db
+        run: npm run import:kpi
+
+      - name: Build
+        run: npm run build
+
+      - name: Smoke test
+        run: |
+          npm start > server.log 2>&1 &
+          SMOKE_REQUIRE_KPI=1 npm run test:smoke -- http://localhost:4000
+
+      - name: Log เซิร์ฟเวอร์ (เมื่อไม่ผ่าน)
+        if: failure()
+        run: cat server.log || true

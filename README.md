@@ -35,13 +35,9 @@ npm install
 cp .env.example .env      # Windows: copy .env.example .env
 ```
 
-แก้ `.env` อย่างน้อย:
+`npm run dev` ไม่ดึงข้อมูลอัตโนมัติ 22:00 (ดึงเฉพาะเซิร์ฟเวอร์จริงที่รัน `npm start`) — ไม่ต้องตั้งอะไรเพิ่ม
 
-```ini
-OPENDATA_CRON=off          # เครื่องทีมไม่ต้องดึงข้อมูลอัตโนมัติ 22:00 (เซิร์ฟเวอร์จริงดึงอยู่แล้ว)
-```
-
-รหัสอื่น ๆ (`FETCH_NOW_CODE`, `ADMIN_CODE`, `ADMIN_PAGE_CODE`, `ANTHROPIC_API_KEY`) ขอจากผู้ดูแลโปรเจกต์ — ไม่ต้องใส่ก็รันได้ แต่ปุ่มที่ต้องใช้รหัส/แชท AI จะใช้ไม่ได้
+รหัสต่าง ๆ (`FETCH_NOW_CODE`, `ADMIN_CODE`, `ADMIN_PAGE_CODE`, `ANTHROPIC_API_KEY`) ขอจากผู้ดูแลโปรเจกต์ — ไม่ต้องใส่ก็รันได้ แต่ปุ่มที่ต้องใช้รหัส/แชท AI จะใช้ไม่ได้
 
 สร้างฐานข้อมูล (ไม่อยู่ใน git) แล้วเปิดเว็บ:
 
@@ -56,16 +52,32 @@ npm run dev               # http://localhost:3000
 
 ใช้กับ **Claude Code**: เปิด `claude` ในโฟลเดอร์โปรเจกต์ — Claude จะอ่าน `CLAUDE.md` เองและทำงานตามกติกาของทีม
 
+## ทำงานร่วมกันหลายคน
+
+ใช้ git ปกติ: แตก branch → แก้ → `npm run check` → push → เปิด PR → CI ผ่านแล้ว merge (รายละเอียดใน [CLAUDE.md](CLAUDE.md))
+
+```bash
+git checkout main && git pull
+git checkout -b feat/<เรื่องที่ทำ>
+# ... แก้โค้ด ...
+npm run check                 # lint + build
+git push -u origin feat/<เรื่องที่ทำ> && gh pr create
+```
+
+ทุก PR มี **CI** บน GitHub Actions ตรวจ lint → สร้างฐานข้อมูลจากไฟล์ใน git → build → smoke test (หน้าเว็บ, REST API, MCP)
+
 ## คำสั่ง
 
 | คำสั่ง | ใช้ทำอะไร |
 |---|---|
-| `npm run dev` | โหมดพัฒนา http://localhost:3000 |
+| `npm run dev` | โหมดพัฒนา http://localhost:3000 (build ที่ `.next-dev` แยกจากเซิร์ฟเวอร์จริง, ไม่ดึงข้อมูล 22:00) |
 | `npm run build` / `npm start` | build และรันใช้งานจริง http://localhost:4000 |
 | `npm run import` | สร้าง data/herb.db ใหม่จากไฟล์ Excel (ปิดเซิร์ฟเวอร์ก่อน — Windows ล็อกไฟล์) |
 | `npm run import:kpi` | นำเข้าไฟล์ล่าสุดของทุกโฟลเดอร์ `opendata-<ปี>` ลง data/kpi.db (ไม่ต้องปิดเซิร์ฟเวอร์) |
 | `npm run fetch:opendata` | ดึง s_ttm4 จาก opendata.moph.go.th → `publicfiles/opendata-2570/` → นำเข้า kpi.db |
 | `npm run lint` | ตรวจโค้ด |
+| `npm run check` | lint + build (ต้องผ่านก่อนเปิด PR) |
+| `npm run test:smoke` | ตรวจหน้าเว็บ / REST API / MCP ของเว็บที่รันอยู่ (`-- http://localhost:4000` = เซิร์ฟเวอร์จริง) |
 
 ## ไฟล์อ้างอิง (publicfiles/)
 
@@ -147,7 +159,7 @@ npm run dev               # http://localhost:3000
 | `ADMIN_CODE` | ใช้ `FETCH_NOW_CODE` | รหัสยืนยันการอัปโหลดไฟล์อ้างอิง |
 | `ANTHROPIC_API_KEY` | (ไม่ตั้ง = ไม่มีปุ่มแชท) | key ของ Claude สำหรับแชท AI (มีค่าใช้จ่าย) |
 | `CHAT_MODEL` / `CHAT_PER_IP` / `CHAT_PER_DAY` / `CHAT_ENABLED` | `claude-opus-5-5` / 20 / 500 / เปิด | โมเดล, โควตาแชท, `0` = ปิดแชทชั่วคราว |
-| `OPENDATA_CRON` | เปิด | `off` = ไม่ดึงอัตโนมัติ (เครื่องทีม) |
+| `OPENDATA_CRON` | เปิดเฉพาะ `npm start` | `on` / `off` = บังคับเปิด/ปิดการดึงอัตโนมัติ |
 | `OPENDATA_CRON_TIME` | `0 22 * * *` | เวลาดึง (cron) |
 | `OPENDATA_FETCH_YEAR` / `OPENDATA_FALLBACK_YEAR` | `auto` / 2569 | ปีที่ดึง / ปีที่ใช้แทนเมื่อยังไม่มีข้อมูล (`none` = ไม่ดึง) |
 | `KPI_MAX_DATASETS` | 12 | จำนวนไฟล์ตัวชี้วัดที่เก็บในฐานข้อมูลพร้อมกัน |
@@ -176,4 +188,4 @@ pm2 start npm --name data_herb -- start   # รันตลอด + เริ่
 ```
 
 ตอนนี้เปิดสู่อินเทอร์เน็ตผ่าน Cloudflare Tunnel (drug.thaipadi.com → localhost:4000)
-อัปเดตโค้ด: `git pull` → หยุดเว็บ → `npm ci` (ถ้า package เปลี่ยน) → `npm run build` → เริ่มเว็บใหม่ → เปิดเว็บตรวจว่าหน้าตาปกติ
+อัปเดตโค้ด: `git pull` → หยุดเว็บ → `npm ci` (ถ้า package เปลี่ยน) → `npm run build` → เริ่มเว็บใหม่ → `npm run test:smoke -- http://localhost:4000`

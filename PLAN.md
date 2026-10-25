@@ -1,6 +1,6 @@
 # แผนงานและการตัดสินใจ — HERB Center
 
-> อัปเดตล่าสุด 2026-10-06 · ภาพรวม/การติดตั้งดู [README.md](README.md) · กติกาโค้ดดู [CLAUDE.md](CLAUDE.md)
+> อัปเดตล่าสุด 2026-10-25 · ภาพรวม/การติดตั้งดู [README.md](README.md) · กติกาโค้ดดู [CLAUDE.md](CLAUDE.md)
 > เมื่อทีมตัดสินใจเรื่องใหม่ ให้เพิ่มในหัวข้อ "การตัดสินใจ" พร้อมวันที่ — Claude ในเครื่องทีมจะได้ไม่ทำสวนทาง
 
 ## สถานะงาน
@@ -17,7 +17,7 @@
 | 8 | MCP server `/api/mcp` | ✅ |
 | 9 | แชท "ถาม AI" `/api/chat` | ✅ โค้ดเสร็จ — **รอใส่ `ANTHROPIC_API_KEY` บนเซิร์ฟเวอร์จริง** (ยังไม่เคยทดสอบกับ Claude จริง) |
 | 10 | เปิดเว็บผ่าน Cloudflare Tunnel (drug.thaipadi.com) | ✅ |
-| 11 | CI บน GitHub Actions (lint + build ทุก PR) | ⬜ |
+| 11 | CI บน GitHub Actions (lint + import + build + smoke test ทุก PR) + PR template | ✅ |
 | 12 | ย้ายขึ้นเซิร์ฟเวอร์ของหน่วยงาน + คู่มือ deploy ฉบับเต็ม (PM2/บริการ Windows, สำรองข้อมูล) | ⬜ |
 
 ### งานค้าง / ข้อควรทำ
@@ -26,6 +26,8 @@
 - ตั้ง Rate Limiting ใน Cloudflare สำหรับ `/api/*` และตรวจว่าไม่ได้บล็อก AI bot ที่เส้นทาง `/api/*`, `/llms.txt`
 - เมื่อ opendata มีข้อมูลปี 2570 จริง: ตรวจว่าระบบเปลี่ยนไปดึง 2570 เอง และคำเตือน "ยังเป็นข้อมูลปี 2569" หายไป
 - ยืนยันสูตรตัวชี้วัด `vs_uc × price` กับเจ้าของตัวชี้วัด (ดูการตัดสินใจด้านล่าง)
+- Node 18 หมดระยะซัพพอร์ตแล้ว — วางแผนอัปเกรดเป็น Node 22 (แก้ `.nvmrc` + ทดสอบ `better-sqlite3` บนเซิร์ฟเวอร์จริง)
+- (ไม่บังคับ) branch protection ของ `main` (บังคับ CI ผ่านก่อน merge) ใช้ไม่ได้กับ repo private แบบฟรี — ต้องอัปเกรด GitHub Pro/Team หรือทำ repo เป็น public
 
 ## ข้อมูลต้นทาง (ตัวเลข ณ การนำเข้าล่าสุด)
 
@@ -69,5 +71,7 @@
 - แชทในเว็บใช้ Claude Opus 5.5 ตอบจากเครื่องมือชุดเดียวกับ MCP เท่านั้น ห้ามเดาตัวเลข · จำกัด 20 ข้อความ/IP/ชม. และ 500/วัน
 
 ### วิธีทำงาน
+- (2026-10-25) ทีมมีหลายคน ใช้ git ปกติ: branch → PR → CI ผ่าน → merge (ไม่บังคับ review) · repo ตั้งให้ merge แบบ squash และลบ branch หลัง merge
+- (2026-10-25) `npm run dev` build ที่ `.next-dev` แยกจาก `npm start` (`.next`) และไม่ดึงข้อมูล 22:00 (ดึงเฉพาะ `npm start`) — เครื่องทีมไม่ต้องตั้ง `OPENDATA_CRON=off` แล้ว
 - ทำบน branch แยก → merge เข้า `main` → push → build + restart เซิร์ฟเวอร์ :4000 — งานถือว่าเสร็จเมื่อขึ้นเว็บจริงแล้ว
 - เทคโนโลยี: Next.js 15 (App Router) + JavaScript (.jsx), SQLite (better-sqlite3), Tailwind v3 · dev พอร์ต 3000, production พอร์ต 4000

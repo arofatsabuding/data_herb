@@ -1,5 +1,6 @@
 node_modules/
 .next/
+.next-dev/
 out/
 data/*.db
 data/*.db-*
@@ -15,3 +16,8 @@ data/*.lock
 publicfiles/opendata-*/manifest.json
 data/reference-archive/
 publicfiles/*.uploading
+
+# เครื่องมือส่วนตัวของแต่ละคน
+.claude/settings.local.json
+.claude/worktrees/
+
