@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { headers } from 'next/headers';
 import { MCP_TOOLS } from '@/lib/agent-tools';
 import { ISSUES, MAX_ITEMS } from '@/lib/drug-check';
@@ -46,6 +47,13 @@ export default async function ApiDocsPage() {
             {origin}/api/v1/openapi.json
           </a>{' '}
           (ใช้กับ ChatGPT Actions หรือเครื่องมืออื่นที่อ่าน OpenAPI ได้)
+        </p>
+        <p className="text-sm text-gray-600">
+          ทดสอบเรียก API จริงจากเบราว์เซอร์:{' '}
+          <Link className="font-semibold text-emerald-700 underline" href="/api-docs/swagger">
+            Swagger UI
+          </Link>{' '}
+          — เลือก endpoint กรอกค่า แล้วกด Execute (มีค่าตัวอย่างให้แล้ว)
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

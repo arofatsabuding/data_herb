@@ -50,7 +50,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 | `app/admin` | **ผู้ดูแลระบบ** — อัปโหลดไฟล์อ้างอิง, ดาวน์โหลดไฟล์ระบบ (ต้องใส่รหัส, cookie 8 ชม.) |
 | `app/api/v1/[[...path]]`, `app/api/mcp` | REST API / MCP — เรียกเครื่องมือชุดเดียวกันใน `lib/agent-tools.js` (MCP ใช้เฉพาะ `MCP_TOOLS` = group `drug`) |
 | `app/api/export`, `app/api/kpi/not-found-24` | ดาวน์โหลด Excel ข้อมูลทั้งหมด (เกินที่แสดงบนหน้า) |
-| `app/llms.txt`, `app/api-docs` | บอก AI/คนว่ามี API อะไร |
+| `app/llms.txt`, `app/api-docs` | บอก AI/คนว่ามี API อะไร · `app/api-docs/swagger` = Swagger UI (`components/SwaggerUI.jsx`, swagger-ui-dist) อ่าน `/api/v1/openapi.json` — ค่าตัวอย่างตั้งที่ `example`/`body` ใน `lib/openapi.js` |
 | `lib/drugs.js` | query ข้อมูลยา (`drug_lookup` ใน herb.db) |
 | `lib/drug-check.js` | ตรวจรายการยาที่ HIS ส่งมา (`POST /api/v1/drugs/check`, MCP `check_drug_list`) — กติกาเดียวกับตัวชี้วัด |
 | `lib/kpi.js` | query ตัวชี้วัด (kpi.db) — `resolveSets`, `getCompareReport`, `getCodeErrors`, `EXCLUDED_ZONES` |

@@ -50,3 +50,19 @@
   from { transform: translateX(-100%); }
   to { transform: translateX(250%); }
 }
+
+/* Swagger UI (/api-docs/swagger) ใช้ฟอนต์เดียวกับเว็บ — โค้ด/JSON ยังเป็น monospace */
+.swagger-wrap .swagger-ui,
+.swagger-wrap .swagger-ui .info .title,
+.swagger-wrap .swagger-ui .opblock-tag,
+.swagger-wrap .swagger-ui .opblock .opblock-summary-description,
+.swagger-wrap .swagger-ui .btn,
+.swagger-wrap .swagger-ui select,
+.swagger-wrap .swagger-ui label,
+.swagger-wrap .swagger-ui table thead tr th,
+.swagger-wrap .swagger-ui .parameter__name,
+.swagger-wrap .swagger-ui .response-col_status,
+.swagger-wrap .swagger-ui .markdown p,
+.swagger-wrap .swagger-ui .renderedMarkdown p {
+  font-family: Sarabun, sans-serif;
+}
