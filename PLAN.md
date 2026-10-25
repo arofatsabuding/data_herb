@@ -13,7 +13,7 @@
 | 4 | เมนู ตัวชี้วัด (มูลค่ายาสมุนไพรในสิทธิ UC) + ดึง opendata ทุกวัน 22:00 | ✅ |
 | 5 | อัตรารหัสยาที่ผิดพลาด + รหัส 24 หลักที่ไม่พบ | ✅ |
 | 6 | เมนู ผู้ดูแลระบบ: อัปโหลดไฟล์อ้างอิง, ดาวน์โหลดไฟล์ระบบ | ✅ |
-| 7 | REST API `/api/v1` + OpenAPI + `/llms.txt` + `/api-docs` | ✅ |
+| 7 | REST API `/api/v1` + OpenAPI + `/llms.txt` + `/api-docs` + Swagger UI `/api-docs/swagger` (ทดสอบเรียก API จริง) | ✅ |
 | 8 | MCP server `/api/mcp` | ✅ |
 | 9 | แชท "ถาม AI" `/api/chat` | ⏸ เอาออกแล้ว (2026-10-25) — ยังใช้ฟรี แบกรับค่าใช้จ่ายต่อข้อความไม่ไหว ค่อยเพิ่มกลับในอนาคต (โค้ดอยู่ใน git history) |
 | 10 | เปิดเว็บผ่าน Cloudflare Tunnel (herb.thaipadi.com — เดิม drug.thaipadi.com) | ✅ |

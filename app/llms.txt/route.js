@@ -17,6 +17,7 @@ export function GET(request) {
 - REST API (JSON): ${o}/api/v1
 - OpenAPI: ${o}/api/v1/openapi.json
 - คู่มือ: ${o}/api-docs
+- ทดสอบ API (Swagger UI): ${o}/api-docs/swagger
 
 ## REST endpoints
 
