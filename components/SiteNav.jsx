@@ -22,6 +22,12 @@ const ChartIcon = (p) => (
     <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
   </Svg>
 );
+const SearchChartIcon = (p) => (
+  <Svg {...p}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5M8 13v-2M11 13V8M14 13v-3" />
+  </Svg>
+);
 const CodeIcon = (p) => (
   <Svg {...p}>
     <path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" />
@@ -42,7 +48,7 @@ const LINK_IDLE = 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700';
 const LINK_ACTIVE =
   'bg-gradient-to-r from-emerald-500 to-teal-600 font-semibold text-white shadow-md shadow-emerald-500/30 after:absolute after:-bottom-1.5 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-emerald-300';
 
-// เมนูที่ต้อง login (เข้าสู่ระบบ / สรุป / ผู้ดูแลระบบ) = กรอบสีทอง · ผู้พัฒนา = เส้นประสีฟ้า
+// เมนูที่ต้อง login (เข้าสู่ระบบ / สรุป / วิเคราะห์รหัสยา / ผู้ดูแลระบบ) = กรอบสีทอง · ผู้พัฒนา = เส้นประสีฟ้า
 const CHIP = 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-semibold transition-colors duration-300';
 const CHIP_TONE = {
   gold: 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-400 hover:text-amber-950',
@@ -62,7 +68,7 @@ const ROW_TONE = {
   devActive: 'border border-dashed border-sky-500 bg-sky-500 font-semibold text-white',
 };
 
-// เมนูทั้งหมดของแถบด้านบน — จอใหญ่ (lg ขึ้นไป) แสดงเรียงแถว, จอเล็กยุบเป็นปุ่มแฮมเบอร์เกอร์
+// เมนูทั้งหมดของแถบด้านบน — จอใหญ่ (xl ขึ้นไป) แสดงเรียงแถว, จอเล็กยุบเป็นปุ่มแฮมเบอร์เกอร์
 // สถานะ login อ่านจาก /api/auth/me ฝั่งเบราว์เซอร์ เพื่อให้หน้าอื่นยังเป็นหน้า static ได้
 export default function SiteNav() {
   const pathname = usePathname() || '/';
@@ -96,6 +102,7 @@ export default function SiteNav() {
       : user
         ? [
             { href: '/stats', label: 'สรุป', icon: ChartIcon, tone: 'gold' },
+            { href: '/analysis', label: 'วิเคราะห์รหัสยา', icon: SearchChartIcon, tone: 'gold' },
             user.admin && { href: '/admin', label: 'ผู้ดูแลระบบ', icon: LockIcon, tone: 'gold' },
             user.dev && { href: '/dev', label: 'ผู้พัฒนา', icon: CodeIcon, tone: 'dev' },
           ].filter(Boolean)
@@ -105,7 +112,7 @@ export default function SiteNav() {
   return (
     <>
       {/* จอใหญ่ */}
-      <nav className="hidden items-center gap-1 whitespace-nowrap text-sm lg:flex" aria-label="เมนูหลัก">
+      <nav className="hidden items-center gap-1 whitespace-nowrap text-sm xl:flex" aria-label="เมนูหลัก">
         {NAV.map((n) => {
           const active = isActive(pathname, n);
           return (
@@ -141,7 +148,7 @@ export default function SiteNav() {
         aria-expanded={open}
         aria-controls="mobile-menu"
         aria-label={open ? 'ปิดเมนู' : 'เปิดเมนู'}
-        className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors lg:hidden ${
+        className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors xl:hidden ${
           open ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-gray-200 text-gray-700 hover:bg-emerald-50'
         }`}
       >
@@ -150,11 +157,11 @@ export default function SiteNav() {
 
       {open && (
         <>
-          <div className="absolute inset-x-0 top-full z-30 h-[100dvh] bg-gray-900/20 lg:hidden" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div className="absolute inset-x-0 top-full z-30 h-[100dvh] bg-gray-900/20 xl:hidden" onClick={() => setOpen(false)} aria-hidden="true" />
           <nav
             id="mobile-menu"
             aria-label="เมนูหลัก"
-            className="absolute inset-x-0 top-full z-40 max-h-[calc(100dvh-5rem)] overflow-y-auto border-b border-gray-200 bg-white px-4 pb-5 pt-3 shadow-xl lg:hidden"
+            className="absolute inset-x-0 top-full z-40 max-h-[calc(100dvh-5rem)] overflow-y-auto border-b border-gray-200 bg-white px-4 pb-5 pt-3 shadow-xl xl:hidden"
           >
             <div className="mx-auto max-w-7xl space-y-1">
               {NAV.map((n) => {

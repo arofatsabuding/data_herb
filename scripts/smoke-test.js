@@ -56,7 +56,7 @@ async function main() {
     await get(css);
     return css;
   });
-  for (const path of ['/search?q=' + encodeURIComponent('ขมิ้นชัน'), '/groups', '/kpi', '/stats', '/api-docs', '/api-docs/swagger', '/llms.txt', '/login', '/admin', '/dev', '/privacy', '/terms']) {
+  for (const path of ['/search?q=' + encodeURIComponent('ขมิ้นชัน'), '/groups', '/kpi', '/stats', '/analysis', '/api-docs', '/api-docs/swagger', '/llms.txt', '/login', '/admin', '/dev', '/privacy', '/terms']) {
     await check(`หน้า ${decodeURIComponent(path)}`, () => get(path).then(() => ''));
   }
 

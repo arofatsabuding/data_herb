@@ -16,7 +16,7 @@
 
 - **JavaScript ไม่ใช้ TypeScript** — ไฟล์ที่มี JSX ใช้ `.jsx` (หน้า/คอมโพเนนต์), ไฟล์ที่ไม่มี JSX ใช้ `.js` (`lib/`, `route.js`, `scripts/`)
 - **SQLite** ผ่าน `better-sqlite3` (sync) — เขียน SQL ปกติแบบ parameterized (`@name`) ห้ามต่อสตริงจากค่าที่ผู้ใช้ส่งมา
-- Tailwind CSS v3 + ฟอนต์ Sarabun · **โทนสว่าง**: พื้นขาว/`slate-50`, หัวหน้า (hero) ไล่สี `emerald-50 → teal-50`, ตัวเน้น emerald/teal ไล่สี · สีทอง amber สำหรับเมนูที่ต้อง login (สรุป/ผู้ดูแลระบบ), สีฟ้า sky เส้นประสำหรับเมนูผู้พัฒนา, สีแดง rose สำหรับส่วน "รหัสยาที่ผิดพลาด"
+- Tailwind CSS v3 + ฟอนต์ Sarabun · **โทนสว่าง**: พื้นขาว/`slate-50`, หัวหน้า (hero) ไล่สี `emerald-50 → teal-50`, ตัวเน้น emerald/teal ไล่สี · สีทอง amber สำหรับเมนูที่ต้อง login (สรุป/วิเคราะห์รหัสยา/ผู้ดูแลระบบ), สีฟ้า sky เส้นประสำหรับเมนูผู้พัฒนา, สีแดง rose สำหรับส่วน "รหัสยาที่ผิดพลาด"
 - Server Component เป็นค่าเริ่มต้น ใส่ `'use client'` เฉพาะคอมโพเนนต์ที่ต้องใช้ state/event
 - อย่า import ค่าที่ไม่ใช่คอมโพเนนต์ (เช่น array) จากไฟล์ `'use client'` เข้า Server Component — ให้ย้ายไปไว้ใน `lib/` (ดู `lib/nav.js`)
 - ไฟล์ดาวน์โหลดทุกจุดเป็น **Excel (.xlsx) ไม่ใช่ CSV** — ใช้ `components/ExcelButton.jsx` (ฝั่งเบราว์เซอร์) หรือ `lib/excel.js` (`xlsxResponse` ฝั่งเซิร์ฟเวอร์) ทุกตารางใหม่ต้องมีปุ่ม Excel
@@ -46,6 +46,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 |---|---|
 | `app/search`, `app/drug/[id]`, `app/groups` | เมนู **ข้อมูลยา** (ค้นหา + รายละเอียด) และ **Drug Group** |
 | `app/kpi` (+ `actions.js`) | เมนู **ตัวชี้วัด** — เลือกระดับพื้นที่, เลือกปีที่เทียบ (cookie `kpi_years`), เลือกไฟล์ข้อมูลแต่ละปี (cookie `kpi_files`), ปุ่มดึงรายงาน |
+| `app/analysis` (+ `app/api/analysis/drug-usage`) | เมนู **วิเคราะห์รหัสยา** (ต้อง login) — ยาที่ใช้มาก × เข้าเกณฑ์ตัวชี้วัด × มี Drug Group + ผู้ผลิต (`getDrugUsage`, `usageByManufacturer` ใน `lib/kpi.js`, cache ในหน่วยความจำ) |
 | `app/stats` | เมนู **สรุป** — สรุปตัวชี้วัดระดับประเทศ + สถิติฐานข้อมูลยา |
 | `app/admin` | **ผู้ดูแลระบบ** — อัปโหลดไฟล์อ้างอิง, ดาวน์โหลดไฟล์ระบบ (ต้อง login) |
 | `app/login`, `app/api/auth/*`, `middleware.js` | **เข้าสู่ระบบด้วย ThaiD** (วิธีเดียว) — `lib/auth.js` (session, `ACCESS` สิทธิ์ขั้นต่ำของแต่ละส่วน, dev = `THAID_DEV_CIDS`), `lib/auth-db.js` (data/auth.db: ผู้ใช้ + ประวัติเข้าใช้) |
@@ -56,11 +57,11 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 | `app/llms.txt`, `app/api-docs` | บอก AI/คนว่ามี API อะไร · `app/api-docs/swagger` = Swagger UI (`components/SwaggerUI.jsx`, swagger-ui-dist) อ่าน `/api/v1/openapi.json` — ค่าตัวอย่างตั้งที่ `example`/`body` ใน `lib/openapi.js` |
 | `lib/drugs.js` | query ข้อมูลยา (`drug_lookup` ใน herb.db) |
 | `lib/drug-check.js` | ตรวจรายการยาที่ HIS ส่งมา (`POST /api/v1/drugs/check`, MCP `check_drug_list`) — กติกาเดียวกับตัวชี้วัด |
-| `lib/kpi.js` | query ตัวชี้วัด (kpi.db) — `resolveSets`, `getCompareReport`, `getCodeErrors`, `EXCLUDED_ZONES` |
+| `lib/kpi.js` | query ตัวชี้วัด (kpi.db) — `resolveSets`, `getCompareReport`, `getCodeErrors`, `getDrugUsage`, `EXCLUDED_ZONES` |
 | `lib/agent-tools.js` | เครื่องมือ 9 ตัวสำหรับ AI (`search_drugs`, `get_drug_by_code24`, `check_drug_list`, `kpi_report`, `kpi_find_area`, …) — **แก้ที่นี่ที่เดียว** REST/MCP ได้ผลพร้อมกัน · ทุกตัวต้องมี `group: 'drug' | 'kpi'` (kpi ไม่ออก MCP); `lib/openapi.js` สร้างเอกสารจาก schema ของเครื่องมือ |
 | `lib/scheduler.js` + `instrumentation.js` | ตั้งเวลาดึง opendata 22:00 (เฉพาะ `npm start`), retry 5 ครั้ง, ล็อก `data/fetch.lock` |
 | `scripts/smoke-test.js`, `.github/` | smoke test, CI (GitHub Actions), PR template |
-| `lib/nav.js`, `components/SiteNav.jsx` | เมนูหลัก (ไฮไลต์เมนูที่เปิดอยู่) + เมนูที่ต้อง login · จอเล็กกว่า `lg` ยุบเป็นปุ่มแฮมเบอร์เกอร์ |
+| `lib/nav.js`, `components/SiteNav.jsx` | เมนูหลัก (ไฮไลต์เมนูที่เปิดอยู่) + เมนูที่ต้อง login · จอเล็กกว่า `xl` (1280px) ยุบเป็นปุ่มแฮมเบอร์เกอร์ |
 | `scripts/import.js` + `schema.sql` | สร้าง herb.db; `scripts/kpi-lib.js` + `import-kpi.js` สร้าง kpi.db; `scripts/reference-files.js` ชื่อไฟล์อ้างอิง + ตรวจรูปแบบไฟล์ที่อัปโหลด |
 
 ฐานข้อมูล (ไม่อยู่ใน git — สร้างจากสคริปต์):
