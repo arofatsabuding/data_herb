@@ -38,7 +38,7 @@ import { checkFetch, fetchNow, selectFile, selectYears } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'ตัวชี้วัด — HERB Center' };
+export const metadata = { title: 'มูลค่ายาสมุนไพร — HERB Center' };
 
 const num = (n) => Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 0 });
 const million = (n) => (Number(n || 0) / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 2 });
@@ -119,7 +119,7 @@ function roundText() {
 function EmptyState() {
   return (
     <div className="mx-auto max-w-xl px-4 py-24 text-center">
-      <h1 className="mb-3 text-2xl font-bold text-gray-800">ยังไม่มีข้อมูลตัวชี้วัด</h1>
+      <h1 className="mb-3 text-2xl font-bold text-gray-800">ยังไม่มีข้อมูลมูลค่ายาสมุนไพร</h1>
       <p className="text-gray-600">
         รัน <code className="mono rounded bg-gray-100 px-2 py-1">npm run import:kpi</code> เพื่อนำเข้าข้อมูล
       </p>
@@ -168,7 +168,7 @@ export default async function KpiPage({ searchParams }) {
         <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-emerald-200/50 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-4 py-10 md:py-14">
           <span className="badge mb-4 border border-emerald-200 bg-emerald-100 px-4 py-1 text-sm text-emerald-700">
-            ตัวชี้วัด · {VIEWS[q.view].label}
+            มูลค่ายาสมุนไพร · {VIEWS[q.view].label}
             {prevYear ? ` · เทียบปีงบประมาณ ${years.join(' · ')}` : ` · ปีงบประมาณ ${curYear}`}
           </span>
           <h1 className="mb-1 text-3xl font-bold text-gray-800 md:text-4xl">{KPI_NAME}</h1>
@@ -273,7 +273,7 @@ export default async function KpiPage({ searchParams }) {
                 return (
                   <StatCard
                     key={y}
-                    label={`มูลค่าตัวชี้วัด ปี ${y}`}
+                    label={`มูลค่ายาสมุนไพร ปี ${y}`}
                     value={num(T(y).kpi_value)}
                     unit="บาท"
                     accent={y === curYear ? 'text-emerald-600' : undefined}
@@ -290,7 +290,7 @@ export default async function KpiPage({ searchParams }) {
                 );
               })}
               <StatCard
-                label="จำนวนครั้งที่จ่ายยา UC (กลุ่มที่คิดตัวชี้วัด)"
+                label="จำนวนครั้งที่จ่ายยา UC (กลุ่มที่คิดมูลค่า)"
                 value={num(cur.matched_vs_uc)}
                 unit="ครั้ง"
                 note={
@@ -337,7 +337,7 @@ export default async function KpiPage({ searchParams }) {
           <div className="mb-1 font-semibold text-emerald-800">วิธีคำนวณ</div>
           <ul className="list-inside list-disc space-y-1">
             <li>ล้างรหัส didstd ให้เหลือแต่ตัวเลข แล้วใช้ 11 หลักแรกหากลุ่มยาใน herbal_drug_master_11</li>
-            <li>มูลค่าตัวชี้วัด = จำนวนครั้ง UC (vs_uc) × ราคาต่อ course ของกลุ่มยา — {NOT_IN_GROUP} คิดเป็น 0 บาท</li>
+            <li>มูลค่ายาสมุนไพร = จำนวนครั้ง UC (vs_uc) × ราคาต่อ course ของกลุ่มยา — {NOT_IN_GROUP} คิดเป็น 0 บาท</li>
             <li>ร้อยละการเปลี่ยนแปลง = (ปีหลัง − ปีก่อน) ÷ ปีก่อน × 100 — เทียบกับปีก่อนหน้าทีละคู่ปี</li>
             <li>
               ไม่นำมาคำนวณ: หน่วยบริการในเขตสุขภาพที่ {EXCLUDED_ZONES.join(', ')} และหน่วยบริการที่ไม่พบเขตสุขภาพ

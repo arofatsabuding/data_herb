@@ -31,8 +31,8 @@ function requireColumns(wb, cols) {
   return { rows, detail: `sheet "${wb.SheetNames[0]}" ${rows.toLocaleString()} แถว` };
 }
 
-// target: herb = ใช้สร้าง data/herb.db (ค้นหายา), kpi = ใช้ในตัวชี้วัด (data/kpi.db)
-// ทุกไฟล์มีผลกับตัวชี้วัด เพราะรหัส 24 หลักในตัวชี้วัดคัดลอกมาจาก herb.db
+// target: herb = ใช้สร้าง data/herb.db (ค้นหายา), kpi = ใช้คำนวณมูลค่ายาสมุนไพร (data/kpi.db)
+// ทุกไฟล์มีผลกับมูลค่ายาสมุนไพร เพราะรหัส 24 หลักในข้อมูลมูลค่ายาสมุนไพรคัดลอกมาจาก herb.db
 const REFERENCE_FILES = [
   {
     key: 'dtam_codes',
@@ -40,7 +40,7 @@ const REFERENCE_FILES = [
     exts: ['.xlsx'],
     title: 'รหัสยาแผนไทย 24 หลัก (ทั้งหมด)',
     source: 'กรมการแพทย์แผนไทยและการแพทย์ทางเลือก',
-    usedBy: 'ค้นหายา, Drug Group, ตรวจรหัส 24 หลักในตัวชี้วัด',
+    usedBy: 'ค้นหายา, Drug Group, ตรวจรหัส 24 หลักในข้อมูลมูลค่ายาสมุนไพร',
     target: 'herb',
     validate(wb) {
       const parts = [];
@@ -87,7 +87,7 @@ const REFERENCE_FILES = [
     exts: ['.xlsx'],
     title: 'กลุ่มยาสมุนไพร 11 หลัก + ราคาต่อ course',
     source: 'herbal_drug_master_11',
-    usedBy: 'คำนวณมูลค่าตัวชี้วัด',
+    usedBy: 'คำนวณมูลค่ายาสมุนไพร',
     target: 'kpi',
     validate: (wb) => requireColumns(wb, ['code11', 'full_name', 'course', 'price']),
   },
@@ -97,7 +97,7 @@ const REFERENCE_FILES = [
     exts: ['.xlsx'],
     title: 'หน่วยบริการสาธารณสุข',
     source: 'health_office',
-    usedBy: 'ชื่อหน่วยบริการ, อำเภอ, จังหวัด, เขตสุขภาพ ในตัวชี้วัด',
+    usedBy: 'ชื่อหน่วยบริการ, อำเภอ, จังหวัด, เขตสุขภาพ ในข้อมูลมูลค่ายาสมุนไพร',
     target: 'kpi',
     validate: (wb) =>
       requireColumns(wb, ['code5', 'name', 'health_office_type_code', 'district_code', 'province_code', 'health_zone']),
@@ -108,7 +108,7 @@ const REFERENCE_FILES = [
     exts: ['.xlsx'],
     title: 'ประเภทหน่วยบริการ',
     source: 'health_office_type',
-    usedBy: 'ประเภทหน่วยบริการในตัวชี้วัด',
+    usedBy: 'ประเภทหน่วยบริการในข้อมูลมูลค่ายาสมุนไพร',
     target: 'kpi',
     validate: (wb) => requireColumns(wb, ['code', 'name']),
   },

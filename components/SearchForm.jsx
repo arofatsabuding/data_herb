@@ -1,7 +1,7 @@
 import ComboBox from './ComboBox';
 import { SearchIcon } from './Icons';
 
-// ฟอร์มค้นหาแบบ GET ธรรมดา — ชื่อยา/ผู้ผลิต/รหัสที่มาของยา พิมพ์เพื่อกรองรายการได้ (ComboBox)
+// ฟอร์มค้นหาแบบ GET ธรรมดา — Drug Group/ชื่อยา/ผู้ผลิต/รหัสที่มาของยา พิมพ์เพื่อกรองรายการได้ (ComboBox)
 export default function SearchForm({
   q = '',
   type = '',
@@ -10,7 +10,7 @@ export default function SearchForm({
   name = '',
   mfr = '',
   src = '',
-  options = { names: [], manufacturers: [], sources: [] },
+  options = { groups: [], names: [], manufacturers: [], sources: [] },
   compact = false,
 }) {
   return (
@@ -34,11 +34,6 @@ export default function SearchForm({
               <option value="เดี่ยว">ยาเดี่ยว</option>
               <option value="ตำรับ">ยาตำรับ</option>
             </select>
-            <select name="group" defaultValue={group} className="input md:flex-1 lg:flex-none lg:w-52">
-              <option value="">ทุกสถานะ Drug Group</option>
-              <option value="has">มี Drug Group</option>
-              <option value="none">ไม่มี Drug Group</option>
-            </select>
             <select name="unit" defaultValue={unit} className="input md:flex-1 lg:flex-none lg:w-44">
               <option value="">ทุกหน่วยเบิก</option>
               <option value="บาท">เบิกเป็นบาท</option>
@@ -52,7 +47,19 @@ export default function SearchForm({
         </button>
       </div>
       {compact && (
-        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_14rem]">
+        <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_14rem]">
+          {/* Drug Group: มี / ไม่มี หรือเลือกกลุ่ม (พิมพ์ชื่อกลุ่มหรือตัวยาได้) */}
+          <ComboBox
+            name="group"
+            defaultValue={group}
+            options={[
+              { value: 'has', label: 'มี Drug Group (ทุกกลุ่ม)' },
+              { value: 'none', label: 'ไม่มี Drug Group' },
+              ...options.groups,
+            ]}
+            allLabel={`ทุก Drug Group (${options.groups.length.toLocaleString('th-TH')} กลุ่ม)`}
+            aria-label="Drug Group"
+          />
           <ComboBox
             name="name"
             defaultValue={name}

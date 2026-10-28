@@ -3,19 +3,23 @@ import Link from 'next/link';
 import Change from '@/components/KpiChange';
 import ExcelButton from '@/components/ExcelButton';
 import LoginRequired from '@/components/LoginRequired';
+import UsageCharts from '@/components/UsageCharts';
 import { allowed, currentUser } from '@/lib/auth';
 import {
+  CLAIM_GROUPS,
   EXCLUDED_ZONES,
-  FOLLOW_UP_CATS,
   NOT_IN_GROUP,
   USAGE_CATS,
+  USAGE_TABS,
   getAreaInfo,
   getDrugUsage,
+  inUsageTab,
+  analysisSets,
   kpiAvailable,
   parseKpiQuery,
-  setsFromCookies,
   sumByYear,
   usageByManufacturer,
+  usageTab,
 } from '@/lib/kpi';
 import kpiLib from '@/scripts/kpi-lib';
 
@@ -39,9 +43,8 @@ const TONE = {
   gray: { card: 'border-gray-300 bg-gray-50', on: 'ring-2 ring-gray-400', text: 'text-gray-700', badge: 'bg-gray-100 text-gray-600' },
 };
 
-// แท็บ: ต้องติดตาม (ค่าเริ่มต้น) / ทั้งหมด / แต่ละกลุ่ม
-const TABS = { follow: 'ต้องติดตาม (ทุกกลุ่มที่ข้อมูลไม่ครบ)', all: 'ทั้งหมด', ...Object.fromEntries(Object.entries(USAGE_CATS).map(([k, c]) => [k, c.label])) };
-const inTab = (tab) => (d) => (tab === 'all' ? true : tab === 'follow' ? FOLLOW_UP_CATS.includes(d.cat) : d.cat === tab);
+// แท็บ: 3 กลุ่มการเบิกจ่าย (ค่าเริ่มต้น = เบิกจ่ายไม่ได้ แต่รู้ยอดเงิน) + ทั้งหมด
+const TABS = USAGE_TABS;
 
 // พารามิเตอร์พื้นที่เดียวกับหน้า /kpi (ค่าเริ่มต้น = ทั้งประเทศ)
 const areaParams = (q) => Object.fromEntries(Object.entries(q).filter(([k, v]) => v && k !== 'cat'));
@@ -52,24 +55,22 @@ export default async function DrugUsagePage({ searchParams }) {
   const user = await currentUser();
   if (!allowed(user, 'analysis')) return <LoginRequired next="/analysis" title="วิเคราะห์รหัสยา" user={user} />;
   const sp = await searchParams;
-  const sets = kpiAvailable() ? setsFromCookies(await cookies()) : [];
+  const { sets, skipped } = kpiAvailable() ? analysisSets(await cookies()) : { sets: [], skipped: [] };
   if (!sets.length) {
-    return <div className="mx-auto max-w-xl px-4 py-24 text-center text-gray-600">ยังไม่มีข้อมูลตัวชี้วัด</div>;
+    return <div className="mx-auto max-w-xl px-4 py-24 text-center text-gray-600">ยังไม่มีข้อมูลมูลค่ายาสมุนไพร</div>;
   }
   const { q, missing } = parseKpiQuery(sp);
   const area = missing ? null : getAreaInfo(q);
-  const tab = TABS[sp.cat] ? sp.cat : 'follow';
+  const tab = usageTab(sp.cat);
   const years = sets.map((s) => s.year);
   const curYear = years[years.length - 1];
   const prevYear = years.length > 1 ? years[years.length - 2] : null;
 
-  // ไฟล์ปีไหนยังเป็นข้อมูลของปีอื่น (opendata ยังไม่มีปีนั้น)
-  const stale = sets
-    .map((s) => ({ year: s.year, fetchYear: kpiLib.listFiles(s.year).find((f) => f.name === s.file)?.fetchYear }))
-    .filter((s) => s.fetchYear && s.fetchYear !== s.year);
+  // ปีที่ไฟล์ยังเป็นข้อมูลของปีอื่น (opendata ยังไม่มีปีนั้น) — หน้านี้ไม่ใช้ปีนั้น
+  const stale = skipped.map((year) => ({ year, fetchYear: kpiLib.listFiles(year)[0]?.fetchYear }));
 
   const usage = area ? getDrugUsage(q, sets) : null;
-  const rows = usage ? usage.items.filter(inTab(tab)) : [];
+  const rows = usage ? usage.items.filter(inUsageTab(tab)) : [];
   const makers = usage ? usageByManufacturer(usage.items, curYear) : [];
   const totalUc = usage ? Object.values(usage.cats).reduce((t, c) => t + c.vs_uc, 0) : 0;
   const xlsx = `/api/analysis/drug-usage?${new URLSearchParams({ ...areaParams(q), cat: tab })}`;
@@ -86,8 +87,9 @@ export default async function DrugUsagePage({ searchParams }) {
           </div>
           <h1 className="mb-1 text-3xl font-bold text-gray-800 md:text-4xl">วิเคราะห์รหัสยา</h1>
           <p className="max-w-3xl text-gray-600">
-            ยาที่มีการจ่ายมากที่สุด แยกตามว่า <b>เข้าเกณฑ์ตัวชี้วัด</b> และ <b>มี Drug Group</b> หรือไม่ พร้อมชื่อผู้ผลิต —
-            ให้ส่วนกลางติดต่อผู้ผลิตปรับปรุงข้อมูล (TTMTID / Drug Group / กลุ่มยา 11 หลัก) ของยาที่ใช้มากได้ก่อน
+            ยาที่มีการจ่ายมากที่สุด แบ่ง 3 กลุ่มตามการเบิกจ่าย — <b>เบิกจ่ายไม่ได้แต่รู้ยอดเงิน</b>, <b>เบิกจ่ายไม่ได้ไม่รู้ยอดเงิน</b> และ{' '}
+            <b>เบิกจ่ายได้</b> พร้อมมูลค่าความเสียหายและชื่อผู้ผลิต — ให้ส่วนกลางติดต่อผู้ผลิตปรับปรุงข้อมูล (TTMTID / Drug Group / กลุ่มยา 11
+            หลัก) ของยาที่ใช้มากได้ก่อน
           </p>
           {area && (
             <p className="mt-3 text-lg">
@@ -101,7 +103,8 @@ export default async function DrugUsagePage({ searchParams }) {
       <div className="mx-auto max-w-7xl px-4 py-8">
         {stale.map((s) => (
           <div key={s.year} className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-800">
-            ไฟล์ปี {s.year} ยังเป็นข้อมูลปี {s.fetchYear} จาก opendata (ยังไม่มีข้อมูลปี {s.year}) — ตัวเลขปี {s.year} จึงยังไม่ใช่ผลงานจริงของปี {s.year}
+            ใช้ข้อมูลถึงปี {curYear} — ไฟล์ปี {s.year} ยังเป็นข้อมูลปี {s.fetchYear} จาก opendata (ยังไม่มีข้อมูลปี {s.year}) จึงยังไม่นำมาวิเคราะห์
+            จะใช้ปี {s.year} เองเมื่อดึงข้อมูลปี {s.year} ได้จริง
           </div>
         ))}
         {missing && <div className="card p-8 text-center text-gray-600">กรุณาเลือก{missing}</div>}
@@ -109,29 +112,14 @@ export default async function DrugUsagePage({ searchParams }) {
 
         {usage && (
           <>
-            {/* 4 ช่อง: ตัวชี้วัด × Drug Group + รหัสที่ไม่พบในไฟล์ 24 หลัก */}
-            <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {Object.entries(USAGE_CATS).map(([k, c]) => {
-                const t = TONE[c.tone];
-                const v = usage.cats[k];
-                return (
-                  <Link
-                    key={k}
-                    href={href(q, { cat: k })}
-                    className={`rounded-2xl border p-4 transition-shadow hover:shadow-md ${t.card} ${tab === k ? t.on : ''}`}
-                  >
-                    <div className={`text-xs font-semibold ${t.text}`}>{c.short}</div>
-                    <div className="mt-1 text-sm font-semibold text-gray-800">{c.label}</div>
-                    <div className="mt-2 text-2xl font-bold text-gray-800">
-                      {num(v.codes)} <span className="text-sm font-medium text-gray-500">รหัส</span>
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      ครั้ง UC ปี {curYear}: {num(v.vs_uc)} ({pct(v.vs_uc, totalUc)})
-                    </div>
-                  </Link>
-                );
-              })}
+            {/* 3 กลุ่มการเบิกจ่าย — คลิกเพื่อดูรายการยาของกลุ่ม */}
+            <div className="mb-6 grid gap-4 lg:grid-cols-3">
+              {Object.entries(CLAIM_GROUPS).map(([k, g]) => (
+                <GroupCard key={k} id={k} g={g} v={usage.groups[k]} cats={usage.cats} on={tab === k} href={href(q, { cat: k })} curYear={curYear} totalUc={totalUc} />
+              ))}
             </div>
+
+            <UsageCharts groups={usage.groups} items={usage.items} years={years} curYear={curYear} />
 
             <nav className="mb-4 flex flex-wrap gap-2 text-sm" aria-label="กลุ่มรหัสยา">
               {Object.entries(TABS).map(([k, label]) => (
@@ -159,11 +147,15 @@ export default async function DrugUsagePage({ searchParams }) {
               <ul className="list-inside list-disc space-y-1">
                 <li>นับตามรหัส 24 หลัก (หลังล้างอักขระ) ที่หน่วยบริการจ่ายในพื้นที่ที่เลือก เรียงตามจำนวนครั้งที่จ่ายยา UC ปี {curYear}</li>
                 <li>
-                  เข้าเกณฑ์ตัวชี้วัด = 11 หลักแรกพบในกลุ่มยา (herbal_drug_master_11) จึงคิดมูลค่าได้ — ไม่พบ = {NOT_IN_GROUP} (0 บาท)
+                  นับมูลค่ายา = 11 หลักแรกพบในกลุ่มยา (herbal_drug_master_11) จึงคิดมูลค่าได้ — ไม่พบ = {NOT_IN_GROUP} (0 บาท)
                 </li>
                 <li>มี Drug Group = TTMTID ของรหัสนี้ในไฟล์รหัส 24 หลัก พบใน TTMT Master (สมสท.) และมี Drug_Group_Nhso (เบิก สปสช. ตามอัตรา course ได้)</li>
                 <li>รหัสเดียวกันมีหลาย TTMTID ได้ — ถ้า TTMTID ใดมี Drug Group ถือว่ามี Drug Group</li>
-                <li>“ต้องติดตาม” = รหัสที่อยู่ในไฟล์รหัส 24 หลักแล้ว แต่ไม่เข้าเกณฑ์ตัวชี้วัด หรือไม่มี Drug Group — รหัสที่ไม่พบในไฟล์ 24 หลักดูได้ที่หน้าตัวชี้วัด</li>
+                <li>
+                  เบิกจ่ายได้ = มี Drug Group · เบิกจ่ายไม่ได้แต่รู้ยอดเงิน = นับมูลค่ายาแต่ไม่มี Drug Group (มูลค่า = ความเสียหาย) ·
+                  เบิกจ่ายไม่ได้ไม่รู้ยอดเงิน = ไม่พบในไฟล์รหัส 24 หลัก หรือไม่มี Drug Group และไม่นับมูลค่ายา (รู้แค่จำนวนรายการ)
+                </li>
+                <li>รายการยา = หน่วยบริการ × รหัสยา (นับแบบเดียวกับอัตรารหัสยาที่ผิดพลาด)</li>
                 <li>ไม่นับหน่วยบริการในเขตสุขภาพที่ {EXCLUDED_ZONES.join(', ')} และหน่วยบริการที่ไม่พบเขตสุขภาพ</li>
               </ul>
             </div>
@@ -174,11 +166,60 @@ export default async function DrugUsagePage({ searchParams }) {
   );
 }
 
+// การ์ดกลุ่มการเบิกจ่าย: ครั้งที่จ่ายยา UC เป็นตัวเลขหลัก รองลงมาคือยอดเงิน แล้วจำนวนรายการ
+function GroupCard({ id, g, v, cats, on, href: link, curYear, totalUc }) {
+  const t = TONE[g.tone];
+  const money = id !== 'loss_unknown';
+  return (
+    <Link href={link} className={`rounded-2xl border p-5 transition-shadow hover:shadow-md ${t.card} ${on ? t.on : ''}`}>
+      <div className="flex items-center gap-2">
+        <span className="h-3 w-3 rounded-sm" style={{ background: g.color }} aria-hidden="true" />
+        <span className={`font-bold ${t.text}`}>{g.label}</span>
+      </div>
+      <div className="mt-1 text-xs text-gray-600">{g.desc}</div>
+      {/* ลำดับความสำคัญ: ครั้งที่จ่ายยา UC → ยอดเงิน → จำนวนรายการ */}
+      <div className="mt-3 text-xs text-gray-500">ครั้งที่จ่ายยา UC ปี {curYear}</div>
+      <div className="text-3xl font-bold text-gray-800">
+        {num(v.vs_uc)} <span className="text-sm font-medium text-gray-500">ครั้ง ({pct(v.vs_uc, totalUc)})</span>
+      </div>
+      <div className={`mt-1 ${money ? 'text-xl font-semibold text-gray-800' : 'py-0.5 text-base font-medium text-gray-500'}`}>
+        {money ? (
+          <>
+            {num(v.kpi_value)} <span className="text-sm font-medium text-gray-500">บาท</span>
+          </>
+        ) : (
+          'ไม่รู้ยอดเงิน'
+        )}
+      </div>
+      <div className="mt-1 text-sm text-gray-600">
+        {num(v.items)} รายการ · {num(v.codes)} รหัส
+      </div>
+      <ul className="mt-3 space-y-0.5 border-t border-black/5 pt-2 text-xs text-gray-600">
+        {g.cats.map((c) => (
+          <li key={c} className="flex justify-between gap-2">
+            <span>{USAGE_CATS[c].label}</span>
+            <span className="whitespace-nowrap">{num(cats[c].codes)} รหัส</span>
+          </li>
+        ))}
+      </ul>
+    </Link>
+  );
+}
+
 function StatusBadges({ d }) {
-  if (!d.in24) return <span className={`badge ${TONE.gray.badge}`}>ไม่พบในไฟล์ 24 หลัก</span>;
+  const g = CLAIM_GROUPS[d.group];
+  const claim = <span className={`badge ${TONE[g.tone].badge} font-semibold`}>{g.label}</span>;
+  if (!d.in24)
+    return (
+      <div className="flex flex-col items-start gap-1">
+        {claim}
+        <span className={`badge ${TONE.gray.badge}`}>ไม่พบในไฟล์ 24 หลัก</span>
+      </div>
+    );
   return (
     <div className="flex flex-col items-start gap-1">
-      <span className={`badge ${d.kpi ? TONE.emerald.badge : TONE.rose.badge}`}>ตัวชี้วัด {d.kpi ? '✓' : '✗'}</span>
+      {claim}
+      <span className={`badge ${d.kpi ? TONE.emerald.badge : TONE.rose.badge}`}>มูลค่ายา {d.kpi ? '✓' : '✗'}</span>
       <span className={`badge ${d.dg ? TONE.emerald.badge : TONE.amber.badge}`}>Drug Group {d.dg ? '✓' : '✗'}</span>
     </div>
   );
@@ -313,7 +354,7 @@ function MakerTable({ makers, curYear, xlsx }) {
         <div>
           <h2 className="text-lg font-bold text-amber-900">ผู้ผลิตที่ควรติดต่อปรับปรุงข้อมูล ({num(makers.length)} ราย)</h2>
           <p className="text-xs text-amber-800">
-            นับเฉพาะรหัสที่ต้องติดตาม เรียงตามครั้งที่จ่ายยา UC ปี {curYear} · รหัสที่ไม่เข้าเกณฑ์ทั้ง 2 อย่างนับในทั้ง 2 คอลัมน์
+            นับเฉพาะรหัสที่เบิกจ่ายไม่ได้ (อยู่ในไฟล์รหัส 24 หลักแล้ว) เรียงตามครั้งที่จ่ายยา UC ปี {curYear}
             {makers.length > MAKER_LIMIT && ` · แสดง ${MAKER_LIMIT} รายแรก — ทั้งหมดอยู่ใน Excel (sheet ผู้ผลิต)`}
           </p>
         </div>
@@ -326,10 +367,11 @@ function MakerTable({ makers, curYear, xlsx }) {
               <th className="px-4 py-3 font-semibold">#</th>
               <th className="px-4 py-3 font-semibold">ผู้ผลิต</th>
               <th className="px-4 py-3 font-semibold">ยาที่ใช้มาก</th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">รหัสที่ต้องติดตาม</th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ไม่มี Drug Group</th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ไม่เข้าเกณฑ์ตัวชี้วัด</th>
+              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">รหัสที่เบิกไม่ได้</th>
+              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">รู้ยอดเงิน</th>
+              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ไม่รู้ยอดเงิน</th>
               <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC {curYear}</th>
+              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">มูลค่าที่เบิกไม่ได้ {curYear}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -339,9 +381,10 @@ function MakerTable({ makers, curYear, xlsx }) {
                 <td className="px-4 py-2 font-semibold text-gray-800">{m.manufacturer}</td>
                 <td className="px-4 py-2 text-gray-600">{m.top.join(', ')}</td>
                 <td className="px-4 py-2 text-right">{num(m.codes)}</td>
-                <td className="px-4 py-2 text-right">{num(m.kpi_nodg + m.none)}</td>
-                <td className="px-4 py-2 text-right">{num(m.dg_nokpi + m.none)}</td>
+                <td className="px-4 py-2 text-right">{num(m.kpi_nodg)}</td>
+                <td className="px-4 py-2 text-right">{num(m.none)}</td>
                 <td className="px-4 py-2 text-right font-semibold">{num(m.vs_uc)}</td>
+                <td className="whitespace-nowrap px-4 py-2 text-right">{num(m.kpi_value)}</td>
               </tr>
             ))}
           </tbody>
@@ -351,9 +394,10 @@ function MakerTable({ makers, curYear, xlsx }) {
                 รวมทั้งหมด ({num(makers.length)} ราย)
               </td>
               <td className="px-4 py-3 text-right">{num(total('codes'))}</td>
-              <td className="px-4 py-3 text-right">{num(total('kpi_nodg') + total('none'))}</td>
-              <td className="px-4 py-3 text-right">{num(total('dg_nokpi') + total('none'))}</td>
+              <td className="px-4 py-3 text-right">{num(total('kpi_nodg'))}</td>
+              <td className="px-4 py-3 text-right">{num(total('none'))}</td>
               <td className="px-4 py-3 text-right">{num(total('vs_uc'))}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-right">{num(total('kpi_value'))}</td>
             </tr>
           </tfoot>
         </table>

@@ -15,7 +15,7 @@ export default function Home() {
     { label: 'รายการยาทั้งหมด', value: s.total, icon: PillIcon, color: 'from-blue-500 to-indigo-600', href: '/search' },
     { label: 'มี Drug Group', value: s.with_group, icon: CheckIcon, color: 'from-emerald-500 to-teal-600', href: '/search?group=has' },
     { label: 'ไม่มี Drug Group', value: s.without_group, icon: XIcon, color: 'from-gray-400 to-gray-600', href: '/search?group=none' },
-    { label: 'จำนวน Drug Group', value: s.groups, icon: LayersIcon, color: 'from-amber-400 to-orange-500', href: '/groups' },
+    { label: 'จำนวน Drug Group', value: s.groups, icon: LayersIcon, color: 'from-amber-400 to-orange-500', href: '/search?group=has' },
   ];
 
   return (

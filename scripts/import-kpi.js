@@ -1,4 +1,4 @@
-// นำเข้าข้อมูลตัวชี้วัดลง data/kpi.db
+// นำเข้าข้อมูลมูลค่ายาสมุนไพรลง data/kpi.db
 // ใช้งาน:
 //   npm run import:kpi
 //       นำเข้าตารางอ้างอิงใหม่ (หน่วยบริการ, ประเภท, กลุ่มยา 11 หลัก, รหัส 24 หลัก)
@@ -16,7 +16,7 @@ const arg = (name) => {
 };
 
 const summary = (s) =>
-  `  ${s.rows} แถว · ${s.hosp} หน่วยบริการ · อยู่ในกลุ่มที่คิดตัวชี้วัด ${s.matched} แถว · มูลค่า ${Math.round(s.kpi).toLocaleString()} บาท`;
+  `  ${s.rows} แถว · ${s.hosp} หน่วยบริการ · อยู่ในกลุ่มที่คิดมูลค่า ${s.matched} แถว · มูลค่า ${Math.round(s.kpi).toLocaleString()} บาท`;
 
 function importOne(db, year, file) {
   console.log(`ปี ${year}: ${file}`);

@@ -9,7 +9,7 @@ export function GET(request) {
   const o = publicOrigin(request);
   const text = `# HERB Center
 
-> ค้นหารหัสยาแผนไทย 24 หลัก (กรมการแพทย์แผนไทยฯ) รวมกับ TTMT Master (สมสท.) และ Drug Group พร้อมตัวชี้วัด "มูลค่ายาสมุนไพรในสิทธิ UC" รายหน่วยบริการ/อำเภอ/จังหวัด/เขต/ประเทศ ข้อมูลเปิดให้อ่านได้ ไม่ต้องใช้ key
+> ค้นหารหัสยาแผนไทย 24 หลัก (กรมการแพทย์แผนไทยฯ) รวมกับ TTMT Master (สมสท.) และ Drug Group พร้อม "มูลค่ายาสมุนไพรในสิทธิ UC" รายหน่วยบริการ/อำเภอ/จังหวัด/เขต/ประเทศ ข้อมูลเปิดให้อ่านได้ ไม่ต้องใช้ key
 
 ## สำหรับ AI agent
 
@@ -23,7 +23,7 @@ export function GET(request) {
 
 ${ENDPOINTS.map((e) => `- ${(e.method || 'get').toUpperCase()} ${o}/api/v1${e.path} — ${e.summary}`).join('\n')}
 
-## MCP tools (เฉพาะข้อมูลยา — ตัวชี้วัดใช้ผ่าน REST)
+## MCP tools (เฉพาะข้อมูลยา — มูลค่ายาสมุนไพรใช้ผ่าน REST)
 
 ${MCP_TOOLS.map((t) => `- ${t.name}: ${t.description}`).join('\n')}
 

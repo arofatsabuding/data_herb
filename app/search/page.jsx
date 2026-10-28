@@ -2,7 +2,8 @@ import SearchForm from '@/components/SearchForm';
 import DrugTable from '@/components/DrugTable';
 import Pagination from '@/components/Pagination';
 import ExcelButton from '@/components/ExcelButton';
-import { listFilterOptions, searchDrugs } from '@/lib/drugs';
+import { RateBadge, formatRate } from '@/components/Badges';
+import { listDrugGroups, listFilterOptions, searchDrugs } from '@/lib/drugs';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,16 @@ export default async function SearchPage({ searchParams }) {
   const mfr = sp.mfr || '';
   const src = sp.src || '';
   const result = searchDrugs({ q, type, group, unit, name, mfr, src, page: sp.page });
-  const options = listFilterOptions({ q, type, group, unit, name, mfr, src });
+  const groups = listDrugGroups();
+  // ตัวเลือก Drug Group: รหัสกลุ่ม — ตัวยาสำคัญ · อัตราเบิก (พิมพ์ชื่อตัวยาก็หาเจอ)
+  const options = {
+    ...listFilterOptions({ q, type, group, unit, name, mfr, src }),
+    groups: groups.map((g) => ({
+      value: g.drug_group,
+      label: [g.drug_group, g.ingredients.join(', '), formatRate(g.reimburse_amount, g.reimburse_unit)].filter(Boolean).join(' — '),
+    })),
+  };
+  const picked = groups.find((g) => g.drug_group === group);
 
   const filters = Object.fromEntries(Object.entries({ q, type, group, unit, name, mfr, src }).filter(([, v]) => v));
   const exportHref = `/api/export?${new URLSearchParams(filters)}`;
@@ -32,13 +42,29 @@ export default async function SearchPage({ searchParams }) {
         q={q}
         type={type}
         unit={unit}
-        group={['has', 'none'].includes(group) ? group : ''}
+        group={group}
         name={name}
         mfr={mfr}
         src={src}
         options={options}
         compact
       />
+
+      {/* Drug Group ที่เลือก — อัตราเบิกและตัวยาสำคัญ (เดิมอยู่ที่เมนู Drug Group) */}
+      {picked && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm">
+          <span className="mono text-lg font-bold text-emerald-700">{picked.drug_group}</span>
+          <span className="flex items-center gap-2">
+            <span className="text-gray-500">เบิกได้ / course</span>
+            <RateBadge amount={picked.reimburse_amount} unit={picked.reimburse_unit} />
+          </span>
+          <span className="text-gray-600">
+            {picked.total.toLocaleString('th-TH')} รายการ (เดี่ยว {picked.single.toLocaleString('th-TH')} · ตำรับ{' '}
+            {picked.recipe.toLocaleString('th-TH')})
+          </span>
+          {picked.ingredients.length > 0 && <span className="text-gray-700">ตัวยาสำคัญ: {picked.ingredients.join(', ')}</span>}
+        </div>
+      )}
 
       <div className="my-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-gray-600">
@@ -49,9 +75,6 @@ export default async function SearchPage({ searchParams }) {
             </>
           ) : (
             'ไม่พบรายการ'
-          )}
-          {group && !['has', 'none'].includes(group) && (
-            <span className="badge ml-2 bg-emerald-100 text-emerald-700">Drug Group: {group}</span>
           )}
         </p>
         {result.total > 0 && (

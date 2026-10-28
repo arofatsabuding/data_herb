@@ -37,7 +37,7 @@ export default function Footer() {
           </Link>
           <p className="max-w-sm text-sm leading-relaxed text-gray-600">
             รวมรหัสยาแผนไทย 24 หลักกับรหัส TTMT เพื่อดูว่ายาสมุนไพรแต่ละรายการอยู่ใน Drug Group ใด
-            พร้อมติดตามตัวชี้วัดมูลค่ายาสมุนไพรในสิทธิ UC
+            พร้อมติดตามมูลค่ายาสมุนไพรในสิทธิ UC
           </p>
         </div>
 
@@ -73,7 +73,7 @@ export default function Footer() {
               <div className="text-gray-500">สำนักพัฒนามาตรฐานระบบข้อมูลสุขภาพไทย (สมสท.)</div>
             </li>
             <li>
-              <div className="font-medium text-gray-800">ข้อมูลการจ่ายยา (ตัวชี้วัด)</div>
+              <div className="font-medium text-gray-800">ข้อมูลการจ่ายยา (มูลค่ายาสมุนไพร)</div>
               <div className="text-gray-500">opendata.moph.go.th</div>
             </li>
           </ul>

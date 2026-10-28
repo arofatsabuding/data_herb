@@ -73,7 +73,7 @@ export default function AdminFiles({ files, busy, action }) {
                   f.target === 'herb' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'
                 }`}
               >
-                {f.target === 'herb' ? 'ค้นหายา + ตัวชี้วัด' : 'ตัวชี้วัด'}
+                {f.target === 'herb' ? 'ค้นหายา + มูลค่ายาสมุนไพร' : 'มูลค่ายาสมุนไพร'}
               </span>
             </div>
 
