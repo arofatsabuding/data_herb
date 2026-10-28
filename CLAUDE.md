@@ -45,7 +45,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 | ที่ | ทำอะไร |
 |---|---|
 | `app/search`, `app/drug/[id]`, `app/groups` | เมนู **ข้อมูลยา** (ค้นหา + รายละเอียด) และ **Drug Group** |
-| `app/kpi` (+ `actions.js`) | เมนู **ตัวชี้วัด** — เลือกระดับพื้นที่, เลือกปีที่เทียบ (cookie `kpi_years`), เลือกไฟล์ข้อมูลแต่ละปี (cookie `kpi_files`), ปุ่มดึงรายงาน |
+| `app/kpi` (+ `actions.js`) | เมนู **ตัวชี้วัด** — เลือกระดับพื้นที่, เลือกปีที่เทียบ (cookie `kpi_years`), เลือกไฟล์ข้อมูลแต่ละปี (cookie `kpi_files`), ปุ่มดึงรายงาน, เปรียบเทียบ 2 ช่วงเวลาในปีเดียวกัน (`resolveSnapshots`, `getSnapshotCompare`) |
 | `app/analysis` (+ `app/api/analysis/drug-usage`) | เมนู **วิเคราะห์รหัสยา** (ต้อง login) — ยาที่ใช้มาก × เข้าเกณฑ์ตัวชี้วัด × มี Drug Group + ผู้ผลิต (`getDrugUsage`, `usageByManufacturer` ใน `lib/kpi.js`, cache ในหน่วยความจำ) |
 | `app/stats` | เมนู **สรุป** — สรุปตัวชี้วัดระดับประเทศ + สถิติฐานข้อมูลยา |
 | `app/admin` | **ผู้ดูแลระบบ** — อัปโหลดไฟล์อ้างอิง, ดาวน์โหลดไฟล์ระบบ (ต้อง login) |
