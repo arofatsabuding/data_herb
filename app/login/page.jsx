@@ -57,6 +57,7 @@ const LogoutIcon = (p) => (
 
 const FEATURES = [
   { icon: ChartIcon, title: 'หน้าสรุป', text: 'ภาพรวมตัวชี้วัดมูลค่ายาสมุนไพรในสิทธิ UC ระดับประเทศ' },
+  { icon: ChartIcon, title: 'วิเคราะห์รหัสยา', text: 'ยาที่ใช้มากแต่ไม่มี Drug Group หรือไม่เข้าเกณฑ์ตัวชี้วัด พร้อมผู้ผลิต' },
   { icon: FileIcon, title: 'ผู้ดูแลระบบ', text: 'อัปโหลดไฟล์อ้างอิงฉบับใหม่ และดาวน์โหลดไฟล์ในระบบ' },
   { icon: RefreshIcon, title: 'ดึงรายงาน ณ ปัจจุบัน', text: 'ดึงข้อมูลจาก opendata ได้ทันที ไม่ต้องรอรอบ 22:00 น.' },
 ];
@@ -72,6 +73,7 @@ export default async function LoginPage({ searchParams }) {
   const links = user
     ? [
         { href: '/stats', label: 'สรุป', icon: ChartIcon, tone: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' },
+        { href: '/analysis', label: 'วิเคราะห์รหัสยา', icon: ChartIcon, tone: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' },
         allowed(user, 'admin') && {
           href: '/admin',
           label: 'ผู้ดูแลระบบ',
