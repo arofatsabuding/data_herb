@@ -16,6 +16,7 @@ data/*.lock
 data/session-secret
 data/admin-secret
 publicfiles/opendata-*/manifest.json
+# ที่สำรองไฟล์อ้างอิงแบบเดิม (ก่อน 28 ต.ค. 2569) — ตอนนี้เก็บทุกรุ่นใน publicfiles/<ชื่อไฟล์>/
 data/reference-archive/
 publicfiles/*.uploading
 

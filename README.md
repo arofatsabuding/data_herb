@@ -87,17 +87,18 @@ git push -u origin feat/<เรื่องที่ทำ> && gh pr create
 ## ไฟล์อ้างอิง (publicfiles/)
 
 อัปเดตได้จากเมนู **ผู้ดูแลระบบ** โดยไม่ต้องปิดเซิร์ฟเวอร์: ระบบตรวจชื่อ sheet/หัวคอลัมน์ก่อน (ไม่ถูกต้อง = ใช้ไฟล์เดิมต่อ)
-ตั้งชื่อไฟล์ใหม่ตามตารางนี้เสมอ สำรองไฟล์เดิมที่ `data/reference-archive/` (5 รุ่นล่าสุด) แล้วสร้างฐานข้อมูล + คำนวณตัวชี้วัดใหม่ (~15 วินาที)
-หรือวางไฟล์เองแล้วรัน `npm run import` + `npm run import:kpi`
+แต่ละไฟล์มีโฟลเดอร์ของตัวเอง `publicfiles/<ชื่อไฟล์>/` (เหมือน `opendata-<ปี>/`) เก็บ**ทุกรุ่น**ที่เคยใช้ ชื่อรุ่น = `<ชื่อไฟล์>_<YYYYMMDD_HHMMSS เวลาไทย>.<นามสกุล>`
+ระบบใช้**รุ่นใหม่สุด**ในโฟลเดอร์เสมอ — อัปโหลดแล้วไฟล์ใหม่เป็นรุ่นล่าสุด รุ่นเดิมยังอยู่ (ดาวน์โหลดได้ในหน้าผู้ดูแล) แล้วสร้างฐานข้อมูล + คำนวณตัวชี้วัดใหม่ (~15 วินาที)
+หรือวางไฟล์เองในโฟลเดอร์ตามรูปแบบชื่อนี้ แล้วรัน `npm run import` + `npm run import:kpi` · ไฟล์แบบเดิม `publicfiles/<ชื่อไฟล์>.xlsx` (ไม่มีโฟลเดอร์) ยังใช้ได้ถ้าโฟลเดอร์ว่าง และจะถูกย้ายเข้าโฟลเดอร์ตอนอัปโหลดครั้งถัดไป
 
-| ไฟล์ | ที่มา / ชื่อเดิม | ต้องมี |
+| โฟลเดอร์ (ชื่อไฟล์) | ที่มา / ชื่อเดิม | ต้องมี |
 |---|---|---|
-| `dtam_drug_codes_24.xlsx` | กรมการแพทย์แผนไทยฯ (รหัสยา24หลักทั้งหมด.xlsx) | sheet ขึ้นต้นด้วย "เดี่ยว" และ "ตำรับ", คอลัมน์ TTMTID, รหัสยาแผนไทย 24 หลัก |
-| `ttmt_master.xls` (หรือ .xlsx) | สมสท. (MasterTTMT_THIS_20260715.xls) | TTMTCode, Drug_Group_Nhso |
-| `ttmt_drug_group_rates.xlsx` | อัตราเบิกต่อ Drug Group | drug_group, course, unit (บาท/point) |
-| `herbal_drug_master_11.xlsx` | กลุ่มยา 11 หลัก + ราคาต่อ course (ตัวชี้วัด) | code11, full_name, course, price |
-| `health_office.xlsx` | หน่วยบริการ → อำเภอ/จังหวัด/เขต | code5, name, health_office_type_code, district_code, province_code, health_zone |
-| `health_office_type.xlsx` | ประเภทหน่วยบริการ | code, name |
+| `dtam_drug_codes_24/` (.xlsx) | กรมการแพทย์แผนไทยฯ (รหัสยา24หลักทั้งหมด.xlsx) | sheet ขึ้นต้นด้วย "เดี่ยว" และ "ตำรับ", คอลัมน์ TTMTID, รหัสยาแผนไทย 24 หลัก |
+| `ttmt_master/` (.xls หรือ .xlsx) | สมสท. (MasterTTMT_THIS_20260715.xls) | TTMTCode, Drug_Group_Nhso |
+| `ttmt_drug_group_rates/` (.xlsx) | อัตราเบิกต่อ Drug Group | drug_group, course, unit (บาท/point) |
+| `herbal_drug_master_11/` (.xlsx) | กลุ่มยา 11 หลัก + ราคาต่อ course (ตัวชี้วัด) | code11, full_name, course, price |
+| `health_office/` (.xlsx) | หน่วยบริการ → อำเภอ/จังหวัด/เขต | code5, name, health_office_type_code, district_code, province_code, health_zone |
+| `health_office_type/` (.xlsx) | ประเภทหน่วยบริการ | code, name |
 | `opendata-<ปี>/Data_<ปี>_sttm4_<แถว>_<dd-mm-yy>[_HH.MM].xlsx` | ข้อมูลการจ่ายยาจาก opendata (1 แถว = หน่วยบริการ × รหัสยา) | — |
 
 ## หลักการรวมข้อมูลยา

@@ -62,7 +62,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 | `lib/scheduler.js` + `instrumentation.js` | ตั้งเวลาดึง opendata 22:00 (เฉพาะ `npm start`), retry 5 ครั้ง, ล็อก `data/fetch.lock` |
 | `scripts/smoke-test.js`, `.github/` | smoke test, CI (GitHub Actions), PR template |
 | `lib/nav.js`, `components/SiteNav.jsx` | เมนูหลัก (ไฮไลต์เมนูที่เปิดอยู่) + เมนูที่ต้อง login · จอเล็กกว่า `xl` (1280px) ยุบเป็นปุ่มแฮมเบอร์เกอร์ |
-| `scripts/import.js` + `schema.sql` | สร้าง herb.db; `scripts/kpi-lib.js` + `import-kpi.js` สร้าง kpi.db; `scripts/reference-files.js` ชื่อไฟล์อ้างอิง + ตรวจรูปแบบไฟล์ที่อัปโหลด |
+| `scripts/import.js` + `schema.sql` | สร้าง herb.db; `scripts/kpi-lib.js` + `import-kpi.js` สร้าง kpi.db; `scripts/reference-files.js` ไฟล์อ้างอิง (`publicfiles/<ชื่อไฟล์>/` เก็บทุกรุ่น ใช้รุ่นใหม่สุด) + ตรวจรูปแบบไฟล์ที่อัปโหลด |
 
 ฐานข้อมูล (ไม่อยู่ใน git — สร้างจากสคริปต์):
 - `data/herb.db`: `drug_codes`, `ttmt_master`, `drug_group_rates`, `meta`, view `drug_lookup`
