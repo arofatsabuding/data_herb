@@ -85,7 +85,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 
 ## ขั้นตอนทำงานร่วมกัน (git ปกติ)
 
-1. `git checkout main && git pull` แล้วแตก branch (`feat/...`, `fix/...`, `docs/...`) — อย่า commit ตรงเข้า `main`
+1. `git checkout main && git pull` แล้วแตก branch (`feat/...`, `fix/...`, `docs/...`) — push ตรงเข้า `main` ไม่ได้ (branch protection: ต้องผ่าน PR + CI)
 2. แก้โค้ด → `npm run check` ผ่าน → `npm run dev` แล้วเปิดหน้าที่แก้ (`npm run test:smoke` ช่วยตรวจรวม)
 3. commit ข้อความภาษาอังกฤษสั้น ๆ → push branch → เปิด PR — CI (`.github/workflows/ci.yml`) ตรวจ lint + build + smoke test ให้อัตโนมัติ
 4. CI ผ่าน → merge เข้า `main` · แตะกติกาข้อมูล (หัวข้อด้านบน) ให้ถามเจ้าของโปรเจกต์ก่อน
