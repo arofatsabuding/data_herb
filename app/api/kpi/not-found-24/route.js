@@ -6,7 +6,7 @@ import { NOT_IN_GROUP, getNotFound24, kpiAvailable, parseKpiQuery, setsFromCooki
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
-  if (!kpiAvailable()) return new Response('ยังไม่มีข้อมูลตัวชี้วัด', { status: 404 });
+  if (!kpiAvailable()) return new Response('ยังไม่มีข้อมูลมูลค่ายาสมุนไพร', { status: 404 });
   const { q, missing } = parseKpiQuery(Object.fromEntries(request.nextUrl.searchParams));
   if (missing) return new Response(`กรุณาเลือก${missing}`, { status: 400 });
 

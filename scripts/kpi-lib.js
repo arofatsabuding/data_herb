@@ -1,7 +1,7 @@
-// ฟังก์ชันนำเข้าข้อมูลตัวชี้วัด "มูลค่ายาสมุนไพรในสิทธิ UC" ลง data/kpi.db
+// ฟังก์ชันนำเข้าข้อมูล "มูลค่ายาสมุนไพรในสิทธิ UC" ลง data/kpi.db
 // ใช้ร่วมกันโดย scripts/import-kpi.js, scripts/fetch-opendata.js และหน้าเว็บ
 //
-// สูตร: มูลค่าตัวชี้วัด = vs_uc × price (ราคาต่อ course ของกลุ่มยาใน herbal_drug_master_11.xlsx)
+// สูตร: มูลค่ายาสมุนไพร = vs_uc × price (ราคาต่อ course ของกลุ่มยาใน herbal_drug_master_11.xlsx)
 // กลุ่มยาหาจากรหัส didstd ที่ล้างให้เหลือแต่ตัวเลข แล้วตัด 11 หลักแรก
 //
 // ไฟล์ข้อมูลแต่ละปีอยู่ใน publicfiles/opendata-<ปี>/Data_<ปี>_sttm4_<แถว>_<dd-mm-yy>.xlsx

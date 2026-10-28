@@ -33,7 +33,7 @@ export async function GET(request, { params }) {
   if (!path.length) {
     return json({
       name: 'HERB Center API',
-      description: 'ข้อมูลรหัสยาแผนไทย 24 หลัก + TTMT Master + Drug Group และตัวชี้วัดมูลค่ายาสมุนไพรในสิทธิ UC',
+      description: 'ข้อมูลรหัสยาแผนไทย 24 หลัก + TTMT Master + Drug Group และมูลค่ายาสมุนไพรในสิทธิ UC',
       openapi: `${origin}/api/v1/openapi.json`,
       mcp: `${origin}/api/mcp`,
       endpoints: ENDPOINTS.map((e) => ({ method: (e.method || 'get').toUpperCase(), path: `/api/v1${e.path}`, summary: e.summary })),

@@ -1,4 +1,4 @@
-// สรุปตัวชี้วัด "มูลค่ายาสมุนไพรในสิทธิ UC" ภาพรวมประเทศ — ใช้ในหน้า /stats
+// สรุป "มูลค่ายาสมุนไพรในสิทธิ UC" ภาพรวมประเทศ — ใช้ในหน้า /stats
 import Link from 'next/link';
 import ExcelButton from '@/components/ExcelButton';
 import Change from '@/components/KpiChange';
@@ -48,7 +48,7 @@ export default function KpiSummary({ sets }) {
     <section className="mb-10">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">ตัวชี้วัด: {KPI_NAME}</h2>
+          <h2 className="text-xl font-bold text-gray-800">{KPI_NAME}</h2>
           <p className="text-sm text-gray-500">
             ภาพรวมประเทศ {prevYear ? `เทียบปีงบประมาณ ${years.join(' · ')}` : `ปีงบประมาณ ${curYear}`} · ไม่รวมเขตสุขภาพที่{' '}
             {EXCLUDED_ZONES.join(', ')} และหน่วยบริการที่ไม่พบเขตสุขภาพ
@@ -61,7 +61,7 @@ export default function KpiSummary({ sets }) {
             filename="kpi_summary_country"
           />
           <Link href="/kpi" className="btn-ghost">
-            ดูรายละเอียดตัวชี้วัด →
+            ดูรายละเอียดมูลค่ายาสมุนไพร →
           </Link>
         </div>
       </div>
@@ -70,7 +70,7 @@ export default function KpiSummary({ sets }) {
         {years.map((y, i) => (
           <Card
             key={y}
-            label={`มูลค่าตัวชี้วัด ปี ${y}`}
+            label={`มูลค่ายาสมุนไพร ปี ${y}`}
             value={num(T(y).kpi_value)}
             unit="บาท"
             sub={i > 0 && (
@@ -93,7 +93,7 @@ export default function KpiSummary({ sets }) {
           }
         />
         <Card
-          label={`ครั้งที่จ่ายยา UC (กลุ่มที่คิดตัวชี้วัด) ปี ${curYear}`}
+          label={`ครั้งที่จ่ายยา UC (กลุ่มที่คิดมูลค่า) ปี ${curYear}`}
           value={num(T(curYear).matched_vs_uc)}
           unit="ครั้ง"
           sub={
@@ -213,7 +213,7 @@ export default function KpiSummary({ sets }) {
       </div>
 
       <p className="mt-3 text-xs text-gray-500">
-        ไฟล์ข้อมูลที่ใช้ (ตามที่เลือกไว้ในหน้าตัวชี้วัด):{' '}
+        ไฟล์ข้อมูลที่ใช้ (ตามที่เลือกไว้ในหน้ามูลค่ายาสมุนไพร):{' '}
         {sets.map((s) => `ปี ${s.year}: ${s.file}`).join(' · ')}
       </p>
     </section>

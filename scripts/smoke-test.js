@@ -1,7 +1,7 @@
 // ตรวจเว็บที่รันอยู่แบบเร็ว ๆ ว่าหน้าหลัก / API / MCP ยังทำงาน — ใช้ก่อนเปิด PR และใน CI
 //   npm run test:smoke                         ตรวจ http://localhost:3000 (npm run dev)
 //   npm run test:smoke -- http://localhost:4000  ตรวจเซิร์ฟเวอร์จริง
-//   SMOKE_REQUIRE_KPI=1                        ไม่มีข้อมูลตัวชี้วัด = ไม่ผ่าน (ค่าเริ่มต้น: ข้ามได้)
+//   SMOKE_REQUIRE_KPI=1                        ไม่มีข้อมูลมูลค่ายาสมุนไพร = ไม่ผ่าน (ค่าเริ่มต้น: ข้ามได้)
 const BASE = (process.argv[2] || process.env.SMOKE_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 const REQUIRE_KPI = process.env.SMOKE_REQUIRE_KPI === '1';
 
@@ -56,7 +56,7 @@ async function main() {
     await get(css);
     return css;
   });
-  for (const path of ['/search?q=' + encodeURIComponent('ขมิ้นชัน'), '/groups', '/kpi', '/stats', '/analysis', '/api-docs', '/api-docs/swagger', '/llms.txt', '/login', '/admin', '/dev', '/privacy', '/terms']) {
+  for (const path of ['/search?q=' + encodeURIComponent('ขมิ้นชัน'), '/search?group=has', '/groups', '/kpi', '/stats', '/analysis', '/api-docs', '/api-docs/swagger', '/llms.txt', '/login', '/admin', '/dev', '/privacy', '/terms']) {
     await check(`หน้า ${decodeURIComponent(path)}`, () => get(path).then(() => ''));
   }
 
@@ -113,10 +113,10 @@ async function main() {
     return '';
   });
 
-  // ตัวชี้วัด — เครื่องที่ยังไม่ได้ import:kpi จะตอบ 503 (ข้ามได้ เว้นแต่ตั้ง SMOKE_REQUIRE_KPI=1)
+  // มูลค่ายาสมุนไพร — เครื่องที่ยังไม่ได้ import:kpi จะตอบ 503 (ข้ามได้ เว้นแต่ตั้ง SMOKE_REQUIRE_KPI=1)
   await check('GET /api/v1/kpi (ประเทศ)', async () => {
     const res = await fetch(BASE + '/api/v1/kpi?level=country');
-    if (res.status === 503 && !REQUIRE_KPI) return 'ข้าม — ยังไม่มีข้อมูลตัวชี้วัด (npm run import:kpi)';
+    if (res.status === 503 && !REQUIRE_KPI) return 'ข้าม — ยังไม่มีข้อมูลมูลค่ายาสมุนไพร (npm run import:kpi)';
     assert(res.status === 200, `HTTP ${res.status}`);
     const j = await res.json();
     const years = Object.keys(j.by_year || {});

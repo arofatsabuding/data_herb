@@ -1,5 +1,5 @@
 // MCP server (Streamable HTTP แบบ stateless) — ให้ Claude / AI อื่นที่รองรับ MCP เรียกเครื่องมือข้อมูลยา (MCP_TOOLS)
-// ไม่เปิดเครื่องมือตัวชี้วัดทาง MCP — ใช้ผ่าน REST API แทน
+// ไม่เปิดเครื่องมือมูลค่ายาสมุนไพรทาง MCP — ใช้ผ่าน REST API แทน
 // เพิ่มใน client ด้วย URL: https://<โดเมน>/api/mcp  (ไม่ต้องใช้ key)
 import { MCP_TOOLS, ToolError, runTool } from '@/lib/agent-tools';
 import { CORS, json, preflight } from '@/lib/api-http';

@@ -65,7 +65,7 @@ export default async function StatsPage() {
   const user = await currentUser();
   if (!allowed(user, 'stats')) return <LoginRequired next="/stats" title="หน้าสรุป" user={user} />;
   const s = getStats();
-  // ตัวชี้วัดใช้ไฟล์ตามที่ผู้ใช้คนนี้เลือกไว้ในหน้า /kpi (ไฟล์ที่ยังไม่ได้นำเข้า → ใช้ไฟล์ที่มี)
+  // มูลค่ายาสมุนไพรใช้ไฟล์ตามที่ผู้ใช้คนนี้เลือกไว้ในหน้า /kpi (ไฟล์ที่ยังไม่ได้นำเข้า → ใช้ไฟล์ที่มี)
   const sets = kpiAvailable() ? setsFromCookies(await cookies()) : [];
   const rows = [
     ['รายการทั้งหมด', s.total],
