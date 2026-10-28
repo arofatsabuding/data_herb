@@ -29,7 +29,7 @@
 
 ## ติดตั้งบนเครื่องทีม (หลัง clone)
 
-ต้องมี **Node.js 18.18 ขึ้นไป** และ git
+ต้องมี **Node.js 22** (แนะนำ ตาม `.nvmrc` · ขั้นต่ำ 18.18) และ git
 
 ```bash
 git clone https://github.com/arofatsabuding/data_herb.git

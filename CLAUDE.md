@@ -7,15 +7,18 @@
 
 **HERB Center** — เว็บค้นหารหัสยาสมุนไพร/ยาแผนไทย (Next.js 15 + SQLite) ของทีม DTAM
 - รวม **รหัสยาแผนไทย 24 หลัก** (กรมการแพทย์แผนไทยฯ) กับ **TTMT Master** (สมสท.) → TTMTID, Drug Group, อัตราเบิกต่อ course
-- **ตัวชี้วัด "มูลค่ายาสมุนไพรในสิทธิ UC"** เทียบ 2 ปีงบประมาณล่าสุด หรือปีที่ผู้ใช้เลือกเอง (cookie `kpi_years`) ระดับประเทศ/เขต/จังหวัด/อำเภอ/หน่วยบริการ จากข้อมูล opendata.moph.go.th (ดึงอัตโนมัติทุกวัน 22:00)
-- เปิดให้ AI/ระบบอื่นใช้: REST API `/api/v1` (ข้อมูลยา + ตัวชี้วัด), MCP server `/api/mcp` (**เฉพาะข้อมูลยา**) · แชท "ถาม AI" เอาออกแล้วเพราะมีค่าใช้จ่าย — อย่าเพิ่มกลับโดยไม่ถามเจ้าของโปรเจกต์
-- เว็บจริง: https://herb.thaipadi.com (Cloudflare Tunnel → `next start` พอร์ต 4000 บนเครื่องผู้ดูแลโปรเจกต์) · repo: github.com/arofatsabuding/data_herb (private)
+- **มูลค่ายาสมุนไพรในสิทธิ UC** (เมนู "มูลค่ายาสมุนไพร" path `/kpi` — เดิมเรียก "ตัวชี้วัด") เทียบ 2 ปีงบประมาณล่าสุด หรือปีที่ผู้ใช้เลือกเอง (cookie `kpi_years`) ระดับประเทศ/เขต/จังหวัด/อำเภอ/หน่วยบริการ จากข้อมูล opendata.moph.go.th (ดึงอัตโนมัติทุกวัน 22:00)
+- **วิเคราะห์รหัสยา** (ต้อง login): แบ่งยาเป็น 3 กลุ่มการเบิกจ่าย — เบิกไม่ได้แต่รู้ยอดเงิน / เบิกไม่ได้ไม่รู้ยอดเงิน / เบิกได้ — พร้อมกราฟความเสียหายและรายชื่อผู้ผลิตที่ควรติดต่อ
+- เปิดให้ AI/ระบบอื่นใช้: REST API `/api/v1` (ข้อมูลยา + มูลค่ายาสมุนไพร), MCP server `/api/mcp` (**เฉพาะข้อมูลยา**) · แชท "ถาม AI" เอาออกแล้วเพราะมีค่าใช้จ่าย — อย่าเพิ่มกลับโดยไม่ถามเจ้าของโปรเจกต์
+- เว็บจริง: https://herb.thaipadi.com (Cloudflare Tunnel → systemd service `herbcenter` = `npm start` พอร์ต 4000 บนเครื่องผู้ดูแลโปรเจกต์)
+- repo: github.com/arofatsabuding/data_herb — **public** (เปิดให้คณะกรรมการ DTAM Digital Hackathon 2026 ดู source code) ทุกอย่างที่ commit ทุกคนเห็นได้ ห้ามมีค่าลับ ข้อมูลส่วนบุคคล หรือไฟล์ข้อมูลจริงใน repo · โฟลเดอร์ `Hackaton/` (เอกสารส่งประกวด) ไม่ขึ้น git
 - ผู้ใช้และทีมสื่อสารเป็น **ภาษาไทย** — ตอบเป็นภาษาไทย ข้อความบนหน้าเว็บเป็นภาษาไทย คอมเมนต์ในโค้ดเป็นภาษาไทย
 
 ## กติกาโค้ด (ต้องทำตาม)
 
 - **JavaScript ไม่ใช้ TypeScript** — ไฟล์ที่มี JSX ใช้ `.jsx` (หน้า/คอมโพเนนต์), ไฟล์ที่ไม่มี JSX ใช้ `.js` (`lib/`, `route.js`, `scripts/`)
 - **SQLite** ผ่าน `better-sqlite3` (sync) — เขียน SQL ปกติแบบ parameterized (`@name`) ห้ามต่อสตริงจากค่าที่ผู้ใช้ส่งมา
+- คำบนหน้าเว็บใช้ **"มูลค่ายา" / "มูลค่ายาสมุนไพร" ไม่ใช้คำว่า "ตัวชี้วัด"** (เช่น "นับมูลค่ายา", ป้าย "มูลค่ายา ✓/✗") — ชื่อตัวแปร/ไฟล์ในโค้ดยังเป็น `kpi` ได้
 - Tailwind CSS v3 + ฟอนต์ Sarabun · **โทนสว่าง**: พื้นขาว/`slate-50`, หัวหน้า (hero) ไล่สี `emerald-50 → teal-50`, ตัวเน้น emerald/teal ไล่สี · สีทอง amber สำหรับเมนูที่ต้อง login (สรุป/วิเคราะห์รหัสยา/ผู้ดูแลระบบ), สีฟ้า sky เส้นประสำหรับเมนูผู้พัฒนา, สีแดง rose สำหรับส่วน "รหัสยาที่ผิดพลาด"
 - Server Component เป็นค่าเริ่มต้น ใส่ `'use client'` เฉพาะคอมโพเนนต์ที่ต้องใช้ state/event
 - อย่า import ค่าที่ไม่ใช่คอมโพเนนต์ (เช่น array) จากไฟล์ `'use client'` เข้า Server Component — ให้ย้ายไปไว้ใน `lib/` (ดู `lib/nav.js`)
@@ -37,7 +40,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 ```
 
 - `npm run dev` (`.next-dev`) กับ `npm start` (`.next`) แยกโฟลเดอร์กันแล้ว รัน dev บนเครื่องเซิร์ฟเวอร์จริงได้ แต่ **ห้ามรัน `npm run build` ตอน `npm start` รันอยู่** (ทับ `.next` → หน้าเว็บไม่มีสไตล์)
-- บนเซิร์ฟเวอร์จริง: หยุด `npm start` → `npm run build` → เริ่ม `npm start` ใหม่ → `npm run test:smoke -- http://localhost:4000`
+- บนเซิร์ฟเวอร์จริง: `systemctl stop herbcenter && npm run check && systemctl start herbcenter` → `npm run test:smoke -- http://localhost:4000`
 - ดึงข้อมูล 22:00 อัตโนมัติ **เฉพาะ `npm start`** — `npm run dev` ไม่ดึง (บังคับได้ด้วย `OPENDATA_CRON=on|off`)
 
 ## แผนที่โค้ด
@@ -47,7 +50,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 | `app/search`, `app/drug/[id]` | เมนู **ข้อมูลยา** (ค้นหา + รายละเอียด + dropdown เลือก Drug Group พร้อมอัตราเบิก) · `app/groups` เหลือแค่ redirect ไป `/search` (เอาเมนู Drug Group ออกแล้ว) |
 | `app/kpi` (+ `actions.js`) | เมนู **มูลค่ายาสมุนไพร** (เดิมชื่อ "ตัวชี้วัด") — เลือกระดับพื้นที่, เลือกปีที่เทียบ (cookie `kpi_years`), เลือกไฟล์ข้อมูลแต่ละปี (cookie `kpi_files`), ปุ่มดึงรายงาน, เปรียบเทียบ 2 ช่วงเวลาในปีเดียวกัน (`resolveSnapshots`, `getSnapshotCompare`) |
 | `app/analysis` (+ `app/api/analysis/drug-usage`) | เมนู **วิเคราะห์รหัสยา** (ต้อง login) — ยาที่ใช้มาก แบ่ง 3 กลุ่มการเบิกจ่าย (`CLAIM_GROUPS`) + กราฟความเสียหาย (`components/UsageCharts.jsx`) + ผู้ผลิต (`getDrugUsage`, `usageByManufacturer` ใน `lib/kpi.js`, cache ในหน่วยความจำ) |
-| `app/stats` | เมนู **สรุป** — สรุปตัวชี้วัดระดับประเทศ + สถิติฐานข้อมูลยา |
+| `app/stats` | เมนู **สรุป** (ต้อง login) — สรุปมูลค่ายาสมุนไพรระดับประเทศ + สถิติฐานข้อมูลยา |
 | `app/admin` | **ผู้ดูแลระบบ** — อัปโหลดไฟล์อ้างอิง, ดาวน์โหลดไฟล์ระบบ (ต้อง login) |
 | `app/login`, `app/api/auth/*`, `middleware.js` | **เข้าสู่ระบบด้วย ThaiD** (วิธีเดียว) — `lib/auth.js` (session, `ACCESS` สิทธิ์ขั้นต่ำของแต่ละส่วน, dev = `THAID_DEV_CIDS`), `lib/auth-db.js` (data/auth.db: ผู้ใช้ + ประวัติเข้าใช้) |
 | `app/privacy`, `app/terms` (+ `components/LegalPage.jsx`, `lib/site.js`) | นโยบายความเป็นส่วนตัว / ข้อกำหนดการใช้งาน — **แก้สิ่งที่ระบบเก็บ (ข้อมูลผู้ใช้, cookie, log) ต้องแก้ /privacy ในงานเดียวกัน** |
@@ -56,11 +59,11 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 | `app/api/export`, `app/api/kpi/not-found-24` | ดาวน์โหลด Excel ข้อมูลทั้งหมด (เกินที่แสดงบนหน้า) |
 | `app/llms.txt`, `app/api-docs` | บอก AI/คนว่ามี API อะไร · `app/api-docs/swagger` = Swagger UI (`components/SwaggerUI.jsx`, swagger-ui-dist) อ่าน `/api/v1/openapi.json` — ค่าตัวอย่างตั้งที่ `example`/`body` ใน `lib/openapi.js` |
 | `lib/drugs.js` | query ข้อมูลยา (`drug_lookup` ใน herb.db) |
-| `lib/drug-check.js` | ตรวจรายการยาที่ HIS ส่งมา (`POST /api/v1/drugs/check`, MCP `check_drug_list`) — กติกาเดียวกับตัวชี้วัด |
-| `lib/kpi.js` | query ตัวชี้วัด (kpi.db) — `resolveSets`, `getCompareReport`, `getCodeErrors`, `getDrugUsage`, `EXCLUDED_ZONES` |
-| `lib/agent-tools.js` | เครื่องมือ 9 ตัวสำหรับ AI (`search_drugs`, `get_drug_by_code24`, `check_drug_list`, `kpi_report`, `kpi_find_area`, …) — **แก้ที่นี่ที่เดียว** REST/MCP ได้ผลพร้อมกัน · ทุกตัวต้องมี `group: 'drug' | 'kpi'` (kpi ไม่ออก MCP); `lib/openapi.js` สร้างเอกสารจาก schema ของเครื่องมือ |
+| `lib/drug-check.js` | ตรวจรายการยาที่ HIS ส่งมา (`POST /api/v1/drugs/check`, MCP `check_drug_list`) — กติกาเดียวกับการคำนวณมูลค่ายา |
+| `lib/kpi.js` | query มูลค่ายาสมุนไพร (kpi.db) — `resolveSets`, `getCompareReport`, `getCodeErrors`, `resolveSnapshots`/`getSnapshotCompare`, `getDrugUsage` + `USAGE_CATS` (4 ประเภทการใช้) → `CLAIM_GROUPS` (3 กลุ่มการเบิกจ่าย), `EXCLUDED_ZONES` |
+| `lib/agent-tools.js` | เครื่องมือ 9 ตัวสำหรับ AI (drug 6 · kpi 3) (`search_drugs`, `get_drug_by_code24`, `check_drug_list`, `kpi_report`, `kpi_find_area`, …) — **แก้ที่นี่ที่เดียว** REST/MCP ได้ผลพร้อมกัน · ทุกตัวต้องมี `group: 'drug' | 'kpi'` (kpi ไม่ออก MCP); `lib/openapi.js` สร้างเอกสารจาก schema ของเครื่องมือ |
 | `lib/scheduler.js` + `instrumentation.js` | ตั้งเวลาดึง opendata 22:00 (เฉพาะ `npm start`), retry 5 ครั้ง, ล็อก `data/fetch.lock` |
-| `scripts/smoke-test.js`, `.github/` | smoke test, CI (GitHub Actions), PR template |
+| `scripts/smoke-test.js`, `.github/` | smoke test 24 รายการ (หน้าเว็บ, เข้าสู่ระบบ, REST, MCP), CI (GitHub Actions), PR template |
 | `lib/nav.js`, `components/SiteNav.jsx` | เมนูหลัก (ไฮไลต์เมนูที่เปิดอยู่) + เมนูที่ต้อง login · จอเล็กกว่า `xl` (1280px) ยุบเป็นปุ่มแฮมเบอร์เกอร์ |
 | `scripts/import.js` + `schema.sql` | สร้าง herb.db; `scripts/kpi-lib.js` + `import-kpi.js` สร้าง kpi.db; `scripts/reference-files.js` ไฟล์อ้างอิง (`publicfiles/<ชื่อไฟล์>/` เก็บทุกรุ่น ใช้รุ่นใหม่สุด) + ตรวจรูปแบบไฟล์ที่อัปโหลด |
 
@@ -73,11 +76,12 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 
 - ไฟล์รหัส 24 หลัก: ใช้เฉพาะ sheet **เดี่ยว + ตำรับ** (ไม่ใช้ sheet ยกเลิก) · 1 แถวใน Excel = 1 แถวในฐานข้อมูล (รหัส 24 หลักซ้ำได้ — TTMTID ต่างกัน)
 - เชื่อม `TTMTID` ↔ `TTMTCode` ใน Master · ไม่พบใน Master หรือ `Drug_Group_Nhso` ว่าง → แสดง **"ไม่มี Drug Group"**
-- ตัวชี้วัด: มูลค่า = `vs_uc` × `price` ของกลุ่มยา 11 หลัก (`herbal_drug_master_11`) · กลุ่มที่ไม่พบ = 0 บาท และแสดงเป็น **"ไม่พบรายการยาหรือรายการยาถูกยกเลิกรหัส"**
+- มูลค่ายาสมุนไพร: มูลค่า = `vs_uc` × `price` ของกลุ่มยา 11 หลัก (`herbal_drug_master_11`) · กลุ่มที่ไม่พบ = 0 บาท และแสดงเป็น **"ไม่พบรายการยาหรือรายการยาถูกยกเลิกรหัส"**
 - **ไม่นับเขตสุขภาพที่ 13** และหน่วยบริการที่ไม่พบเขต (`EXCLUDED_ZONES`)
 - อัตรารหัสยาที่ผิดพลาด = รหัส (หลังล้าง) ที่ไม่พบในไฟล์รหัส 24 หลัก ÷ ทั้งหมด นับตาม **รายการยา (หน่วยบริการ × รหัสยา)** · คอลัมน์ "เปลี่ยนแปลง" แสดงเป็น **%**
 - ไฟล์ในโฟลเดอร์ `opendata-2570/` ตอนนี้ยังเป็น **ข้อมูลปี 2569** (opendata ยังไม่มี 2570 — `fetchYear` ใน manifest) หน้าเว็บและ API ต้องเตือนเรื่องนี้เสมอ จะหายเองเมื่อดึงข้อมูล 2570 ได้จริง
-- ข้อมูลยาและตัวชี้วัดเปิดให้ทุกคนอ่าน (API/MCP ไม่ใช้ key) — ตัดสินใจแล้ว
+- กลุ่มการเบิกจ่าย (`CLAIM_GROUPS`): นับมูลค่ายาแต่ไม่มี Drug Group = เบิกไม่ได้แต่รู้ยอดเงิน · ไม่พบรหัส 24 หลัก หรือไม่นับมูลค่ายาและไม่มี Drug Group = เบิกไม่ได้ไม่รู้ยอดเงิน · มี Drug Group = เบิกได้
+- ข้อมูลยาและมูลค่ายาสมุนไพรเปิดให้ทุกคนอ่าน (API/MCP ไม่ใช้ key) — ตัดสินใจแล้ว
 
 ## ขั้นตอนทำงานร่วมกัน (git ปกติ)
 
@@ -85,7 +89,8 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 2. แก้โค้ด → `npm run check` ผ่าน → `npm run dev` แล้วเปิดหน้าที่แก้ (`npm run test:smoke` ช่วยตรวจรวม)
 3. commit ข้อความภาษาอังกฤษสั้น ๆ → push branch → เปิด PR — CI (`.github/workflows/ci.yml`) ตรวจ lint + build + smoke test ให้อัตโนมัติ
 4. CI ผ่าน → merge เข้า `main` · แตะกติกาข้อมูล (หัวข้อด้านบน) ให้ถามเจ้าของโปรเจกต์ก่อน
-5. deploy บนเครื่องเซิร์ฟเวอร์จริง: `git pull` → หยุด `npm start` → `npm ci` (ถ้า package-lock เปลี่ยน) → `npm run build` → `npm start` → `npm run test:smoke -- http://localhost:4000`
+5. deploy บนเครื่องเซิร์ฟเวอร์จริง: `git pull` → `systemctl stop herbcenter` → `npm ci` (ถ้า package-lock เปลี่ยน) → `npm run check` → `systemctl start herbcenter` → `npm run test:smoke -- http://localhost:4000`
+   - merge แบบ squash (ข้อความ commit มี `(#เลข PR)`) · หลัง merge ที่ต้องส่งประกวด ให้สร้าง ZIP ใหม่ด้วย `git archive --format=zip --prefix=data_herb/ -o Hackaton/04_SourceCode/ControlAlternateAI_SourceCode_Round1.zip main`
 6. เปลี่ยนพฤติกรรม/การตั้งค่า → อัปเดต README.md หรือ PLAN.md ในงานเดียวกัน
 
 ## สิ่งที่ห้าม / ต้องระวัง
