@@ -1,4 +1,6 @@
-// ไฟล์อ้างอิงใน publicfiles/ — ชื่อไฟล์คงที่ (ภาษาอังกฤษ) ผู้ดูแลอัปโหลดไฟล์ใหม่แทนที่ได้จากหน้า /admin
+// ไฟล์อ้างอิงใน publicfiles/<ชื่อไฟล์>/ — 1 โฟลเดอร์ต่อ 1 ไฟล์ (เหมือน opendata-<ปี>) เก็บทุกรุ่นที่เคยใช้
+// ชื่อรุ่น = <ชื่อไฟล์>_<YYYYMMDD_HHMMSS เวลาไทย>.<นามสกุล> · ระบบใช้รุ่นใหม่สุดในโฟลเดอร์เสมอ
+// ผู้ดูแลอัปโหลดรุ่นใหม่ได้จากหน้า /admin — รุ่นเดิมยังอยู่ในโฟลเดอร์ ไม่ถูกลบ
 // ใช้ร่วมกันโดย scripts/import.js, scripts/kpi-lib.js และหน้าผู้ดูแล
 const path = require('path');
 const fs = require('fs');
@@ -6,9 +8,7 @@ const XLSX = require('xlsx');
 
 const ROOT = fs.existsSync(path.join(__dirname, '..', 'publicfiles')) ? path.join(__dirname, '..') : process.cwd();
 const SRC_DIR = path.join(ROOT, 'publicfiles');
-const ARCHIVE_DIR = path.join(ROOT, 'data', 'reference-archive'); // ไฟล์เดิมที่ถูกแทนที่
 const HISTORY_PATH = path.join(ROOT, 'data', 'reference-history.json');
-const KEEP_ARCHIVE = 5; // เก็บไฟล์เดิมไว้กี่รุ่นต่อไฟล์
 
 const clean = (v) => {
   if (v === undefined || v === null) return null;
@@ -116,10 +116,38 @@ const REFERENCE_FILES = [
 
 const getRef = (key) => REFERENCE_FILES.find((r) => r.key === key) || null;
 
-// path ของไฟล์ที่ใช้อยู่ (ลองทุกนามสกุลที่รับ) — null ถ้าไม่มี
-function refPath(key) {
+const refDir = (ref) => path.join(SRC_DIR, ref.base);
+
+// YYYYMMDD_HHMMSS ตามเวลาไทย
+function stampOf(ms) {
+  const d = new Date(ms + 7 * 3600 * 1000).toISOString();
+  return `${d.slice(0, 10).replace(/-/g, '')}_${d.slice(11, 19).replace(/:/g, '')}`;
+}
+
+// ทุกรุ่นในโฟลเดอร์ เรียงจากใหม่ไปเก่า → [{ name, path, size, mtime }]
+function listVersions(key) {
   const ref = getRef(key);
   if (!ref) throw new Error(`ไม่รู้จักไฟล์อ้างอิง ${key}`);
+  const dir = refDir(ref);
+  if (!fs.existsSync(dir)) return [];
+  const re = new RegExp(`^${ref.base}_(\\d{8}_\\d{6})(?:_(\\d+))?(${ref.exts.map((e) => e.replace('.', '\\.')).join('|')})$`, 'i');
+  // ลำดับ = วันเวลาในชื่อ แล้วตามเลขต่อท้าย (อัปโหลดหลายครั้งในวินาทีเดียวกัน)
+  const order = (name) => {
+    const m = re.exec(name);
+    return `${m[1]}_${String(m[2] || 1).padStart(4, '0')}`;
+  };
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isFile() && re.test(d.name))
+    .map((d) => {
+      const st = fs.statSync(path.join(dir, d.name));
+      return { name: d.name, path: path.join(dir, d.name), size: st.size, mtime: st.mtimeMs };
+    })
+    .sort((a, b) => order(b.name).localeCompare(order(a.name)));
+}
+
+// ไฟล์รูปแบบเดิม (publicfiles/<ชื่อไฟล์>.<นามสกุล> ไม่มีโฟลเดอร์) — ยังใช้ได้ถ้าโฟลเดอร์ยังไม่มีรุ่นใด
+function legacyPath(ref) {
   for (const ext of ref.exts) {
     const p = path.join(SRC_DIR, ref.base + ext);
     if (fs.existsSync(p)) return p;
@@ -127,11 +155,18 @@ function refPath(key) {
   return null;
 }
 
+// path ของไฟล์ที่ใช้อยู่ (รุ่นใหม่สุดในโฟลเดอร์) — null ถ้าไม่มี
+function refPath(key) {
+  const ref = getRef(key);
+  if (!ref) throw new Error(`ไม่รู้จักไฟล์อ้างอิง ${key}`);
+  return listVersions(key)[0]?.path || legacyPath(ref);
+}
+
 function requireRefPath(key) {
   const p = refPath(key);
   if (!p) {
     const ref = getRef(key);
-    throw new Error(`ไม่พบไฟล์ publicfiles/${ref.base}${ref.exts[0]} (${ref.title})`);
+    throw new Error(`ไม่พบไฟล์ใน publicfiles/${ref.base}/ (${ref.title})`);
   }
   return p;
 }
@@ -170,35 +205,35 @@ function validateReference(key, buffer) {
   return ref.validate(wb);
 }
 
-// แทนที่ไฟล์อ้างอิง: ไฟล์เดิมย้ายไปเก็บที่ data/reference-archive/ (เก็บ KEEP_ARCHIVE รุ่นล่าสุด)
+// ชื่อรุ่นที่ยังไม่มีในโฟลเดอร์ (เวลาเดียวกันต่อท้าย _2, _3, …)
+function versionName(ref, dir, ms, ext) {
+  const stem = `${ref.base}_${stampOf(ms)}`;
+  let name = stem + ext;
+  for (let i = 2; fs.existsSync(path.join(dir, name)); i++) name = `${stem}_${i}${ext}`;
+  return name;
+}
+
+// เพิ่มรุ่นใหม่ในโฟลเดอร์ publicfiles/<ชื่อไฟล์>/ และใช้เป็นรุ่นล่าสุด — รุ่นเดิมเก็บไว้ทั้งหมด
+// ไฟล์รูปแบบเดิม (ไม่มีโฟลเดอร์) ถูกย้ายเข้าโฟลเดอร์ก่อน โดยตั้งชื่อตามเวลาแก้ไขของไฟล์
 function replaceReference(key, buffer, ext, info) {
   const ref = getRef(key);
   if (!ref.exts.includes(ext)) throw new Error(`รับเฉพาะไฟล์ ${ref.exts.join(' / ')}`);
-  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '_');
-  const dest = path.join(SRC_DIR, ref.base + ext);
-  const tmp = `${dest}.uploading`;
+  const dir = refDir(ref);
+  fs.mkdirSync(dir, { recursive: true });
+  const tmp = path.join(SRC_DIR, `${ref.base}${ext}.uploading`);
   fs.writeFileSync(tmp, buffer);
 
-  let archived = null;
-  const current = refPath(key);
-  if (current) {
-    fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
-    archived = `${ref.base}_${stamp}${path.extname(current)}`;
-    fs.renameSync(current, path.join(ARCHIVE_DIR, archived));
+  const legacy = legacyPath(ref);
+  if (legacy) {
+    fs.renameSync(legacy, path.join(dir, versionName(ref, dir, fs.statSync(legacy).mtimeMs, path.extname(legacy))));
   }
-  fs.renameSync(tmp, dest);
+  const previous = listVersions(key)[0]?.name || null;
+  const name = versionName(ref, dir, Date.now(), ext);
+  fs.renameSync(tmp, path.join(dir, name));
 
-  // ลบไฟล์เก่าเกินจำนวนที่เก็บ
-  const old = fs
-    .readdirSync(ARCHIVE_DIR, { withFileTypes: true })
-    .filter((d) => d.isFile() && d.name.startsWith(`${ref.base}_`) && /_\d{8}_\d{6}\.\w+$/.test(d.name))
-    .map((d) => d.name)
-    .sort()
-    .reverse();
-  for (const name of old.slice(KEEP_ARCHIVE)) fs.rmSync(path.join(ARCHIVE_DIR, name), { force: true });
-
-  addHistory(key, { ...info, file: path.basename(dest), archived, uploadedAt: new Date().toISOString() });
-  return dest;
+  const file = `${ref.base}/${name}`;
+  addHistory(key, { ...info, file, previous: previous && `${ref.base}/${previous}`, uploadedAt: new Date().toISOString() });
+  return path.join(dir, name);
 }
 
 // ข้อมูลไฟล์ทั้งหมดสำหรับหน้าผู้ดูแล
@@ -207,6 +242,7 @@ function listReferences() {
   return REFERENCE_FILES.map((ref) => {
     const p = refPath(ref.key);
     const st = p ? fs.statSync(p) : null;
+    const versions = listVersions(ref.key);
     return {
       key: ref.key,
       title: ref.title,
@@ -214,8 +250,10 @@ function listReferences() {
       usedBy: ref.usedBy,
       target: ref.target,
       exts: ref.exts,
-      file: p ? path.basename(p) : null,
-      expected: ref.base + ref.exts[0],
+      file: p ? path.relative(SRC_DIR, p).split(path.sep).join('/') : null,
+      folder: ref.base,
+      versions: versions.map(({ name, size, mtime }) => ({ file: `${ref.base}/${name}`, name, size, mtime })),
+      expected: `${ref.base}/${ref.base}_<วันเวลา>${ref.exts[0]}`,
       size: st?.size ?? null,
       mtime: st?.mtimeMs ?? null,
       history: history[ref.key] || [],
@@ -224,6 +262,6 @@ function listReferences() {
 }
 
 module.exports = {
-  REFERENCE_FILES, SRC_DIR, ARCHIVE_DIR,
-  getRef, refPath, requireRefPath, validateReference, replaceReference, listReferences, readHistory, addHistory,
+  REFERENCE_FILES, SRC_DIR,
+  getRef, refPath, requireRefPath, listVersions, validateReference, replaceReference, listReferences, readHistory, addHistory,
 };

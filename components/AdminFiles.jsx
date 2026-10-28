@@ -91,6 +91,9 @@ export default function AdminFiles({ files, busy, action }) {
                   ) : (
                     <span className="text-rose-600">ไม่พบไฟล์ ({f.expected})</span>
                   )}
+                  {f.versions.length > 1 && (
+                    <div className="font-sans text-xs text-gray-500">เก็บไว้ทั้งหมด {f.versions.length} รุ่น (รวมรุ่นที่ใช้อยู่)</div>
+                  )}
                 </dd>
               </div>
               <div>
