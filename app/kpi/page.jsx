@@ -20,11 +20,14 @@ import {
   getCompareReport,
   getDatasets,
   getOfficeTypes,
+  getSnapshotCompare,
   kpiAvailable,
   parseKpiQuery,
   parsePrefs,
   parseYears,
   resolveSets,
+  resolveSnapshots,
+  snapshotYears,
   sumByYear,
   yearPairs,
 } from '@/lib/kpi';
@@ -146,6 +149,10 @@ export default async function KpiPage({ searchParams }) {
   const { q, missing } = parseKpiQuery(sp);
   const report = missing ? null : getCompareReport(q, sets);
   const codeErrors = report ? getCodeErrors(q, sets) : null;
+  // เปรียบเทียบ 2 ช่วงเวลาในปีเดียวกัน (sy = ปี, sa / sb = ไฟล์) — ไฟล์ที่ยังไม่ได้นำเข้า → นำเข้าเบื้องหลัง
+  const snap = report ? resolveSnapshots(sp.sy, sp.sa, sp.sb) : null;
+  if (snap) for (const f of snap.pending) ensureImported(snap.year, f);
+  const snapData = getSnapshotCompare(q, snap);
   const options = getAreaOptions();
   const types = getOfficeTypes();
 
@@ -309,6 +316,8 @@ export default async function KpiPage({ searchParams }) {
                 <TopGroups items={report.topGroups} q={q} years={years} />
               </div>
             )}
+
+            {snap && <SnapshotCompare snap={snap} data={snapData} q={q} />}
 
             <KpiCodeErrors
               data={codeErrors}
@@ -490,6 +499,176 @@ function ChildrenTable({ report, q, years }) {
           </tfoot>
         </table>
       </div>
+    </section>
+  );
+}
+
+// วันเวลาของไฟล์ เช่น 27/10/69 22:07 น.
+// ผลต่างแบบมีเครื่องหมาย เช่น +1,234 / −56 / 0
+const signed = (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${num(Math.abs(d))}`;
+
+const fileWhen = (f) => `${f.stamp.replace(/-/g, '/')}${f.time ? ` ${f.time} น.` : ''}`;
+
+// เปรียบเทียบ 2 ช่วงเวลาในปีเดียวกัน — เลือกไฟล์ 2 ไฟล์ (ก = ช่วงก่อน, ข = ช่วงหลัง)
+function SnapshotCompare({ snap, data, q }) {
+  const [A, B] = snap.sets;
+  const isHosp = q.view === 'hosp';
+  const V = VIEWS[q.view];
+  const uc = isHosp ? 'vs_uc' : 'matched_vs_uc';
+  const imported = new Set(getDatasets().map((d) => d.file));
+  const years = snapshotYears();
+  const stale = A.meta?.fetchYear && A.meta.fetchYear !== snap.year;
+  const get = (r, k, f) => r.byYear[k]?.[f] || 0;
+  const rows = data
+    ? [...data.children].sort((x, y) => get(y, 'b', 'kpi_value') - get(x, 'b', 'kpi_value') || get(y, 'a', 'kpi_value') - get(x, 'a', 'kpi_value'))
+    : [];
+  const sums = { a: data?.totals.a || {}, b: data?.totals.b || {} };
+  const diff = (sums.b.kpi_value || 0) - (sums.a.kpi_value || 0);
+  const label = (c) => (isHosp ? c.drug_name || c.full_name || NOT_IN_GROUP : c.label);
+  const select = 'w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none';
+
+  return (
+    <section id="snapshot" className="card mt-6 scroll-mt-24 overflow-hidden border border-sky-200">
+      <div className="border-b border-sky-100 bg-sky-50/60 px-6 py-4">
+        <h2 className="text-lg font-bold text-sky-900">เปรียบเทียบ 2 ช่วงเวลา ปี {snap.year}</h2>
+        <p className="text-xs text-sky-800">
+          เลือกไฟล์ข้อมูล 2 รอบที่ดึงจาก opendata ของปีเดียวกัน เพื่อดูว่าผลงานเปลี่ยนไปเท่าไรระหว่างช่วงเวลา ({V.label})
+        </p>
+        <form method="get" action="/kpi#snapshot" className="mt-3 grid gap-3 md:grid-cols-[auto_1fr_1fr_auto] md:items-end">
+          {Object.entries(q)
+            .filter(([, v]) => v)
+            .map(([k, v]) => (
+              <input key={k} type="hidden" name={k} value={v} />
+            ))}
+          <label className="text-sm">
+            <span className="mb-1 block text-xs font-semibold text-gray-600">ปีงบประมาณ</span>
+            <select name="sy" defaultValue={snap.year} className={select}>
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+          {[
+            ['sa', 'ช่วงก่อน (ก)', A],
+            ['sb', 'ช่วงหลัง (ข)', B],
+          ].map(([name, text, s]) => (
+            <label key={name} className="min-w-0 text-sm">
+              <span className="mb-1 block text-xs font-semibold text-gray-600">{text}</span>
+              <select name={name} defaultValue={s.file} className={select}>
+                {snap.files.map((f) => (
+                  <option key={f.name} value={f.name}>
+                    {fileLabel(f, snap.year, imported)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+          <button type="submit" className="btn-primary whitespace-nowrap">
+            เปรียบเทียบ
+          </button>
+        </form>
+        {stale && (
+          <p className="mt-2 text-xs text-amber-800">
+            ไฟล์ปี {snap.year} ยังเป็นข้อมูลปี {A.meta.fetchYear} จาก opendata (ยังไม่มีข้อมูลปี {snap.year}) — ตัวเลขจึงยังไม่ใช่ผลงานจริงของปี {snap.year}
+          </p>
+        )}
+      </div>
+
+      {!data ? (
+        <div className="px-6 py-8 text-center text-sm text-amber-800">
+          กำลังเตรียมไฟล์ {snap.pending.join(', ')} ประมาณ 1 นาที — รีเฟรชหน้านี้ภายหลัง
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-4 px-6 py-5 sm:grid-cols-3">
+            {[
+              ['ก', A],
+              ['ข', B],
+            ].map(([t, s], i) => (
+              <div key={t} className="rounded-2xl border border-gray-100 bg-white p-4">
+                <div className="text-xs text-gray-500">
+                  ช่วง{t}: {fileWhen(s.meta)} · ข้อมูลถึง {formatDateCom(s.dataset.max_date_com)}
+                </div>
+                <div className={`text-2xl font-bold ${i ? 'text-sky-700' : 'text-gray-700'}`}>
+                  {num(sums[s.year].kpi_value)} <span className="text-sm font-medium text-gray-500">บาท</span>
+                </div>
+                <div className="text-xs text-gray-500">ครั้ง UC {num(sums[s.year][uc])}</div>
+              </div>
+            ))}
+            <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+              <div className="text-xs text-gray-500">ผลต่าง ข − ก</div>
+              <div className={`text-2xl font-bold ${diff > 0 ? 'text-emerald-700' : diff < 0 ? 'text-rose-700' : 'text-gray-600'}`}>
+                {signed(diff)} <span className="text-sm font-medium text-gray-500">บาท</span>
+              </div>
+              <Change prev={sums.a.kpi_value} cur={sums.b.kpi_value} />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-6 py-3">
+            <div className="text-sm font-semibold text-gray-700">
+              แยกตาม{isHosp ? 'รายการยา (รหัส 24 หลัก)' : V.childLabel} ({num(rows.length)})
+            </div>
+            <ExcelButton tables={[{ id: 'kpi-snapshot', name: `เทียบ 2 ช่วงเวลา ${snap.year}` }]} filename={kpiFile(q, `snapshot_${snap.year}`)} />
+          </div>
+          <div className="max-h-[36rem] overflow-auto">
+            <table id="kpi-snapshot" className="w-full text-sm">
+              <thead className="sticky top-0 bg-sky-50 text-left text-sky-900">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">#</th>
+                  <th className="min-w-[10rem] px-4 py-3 font-semibold">{isHosp ? 'รายการยา' : V.childLabel}</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC ก</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ครั้ง UC ข</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">มูลค่า ก (บาท)</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">มูลค่า ข (บาท)</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">ผลต่าง (บาท)</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">เปลี่ยนแปลง</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {rows.map((c, i) => {
+                  const d = get(c, 'b', 'kpi_value') - get(c, 'a', 'kpi_value');
+                  return (
+                    <tr key={c.key ?? c.code24 ?? i} className="hover:bg-sky-50/40">
+                      <td className="px-4 py-2 text-gray-400">{i + 1}</td>
+                      <td className="px-4 py-2">
+                        <div className="font-semibold text-gray-800">{label(c)}</div>
+                        {isHosp && <div className="mono text-xs text-gray-500">{c.code24 || '(ว่าง)'}</div>}
+                      </td>
+                      <td className="px-4 py-2 text-right">{num(get(c, 'a', uc))}</td>
+                      <td className="px-4 py-2 text-right">{num(get(c, 'b', uc))}</td>
+                      <td className="px-4 py-2 text-right">{num(get(c, 'a', 'kpi_value'))}</td>
+                      <td className="px-4 py-2 text-right font-semibold">{num(get(c, 'b', 'kpi_value'))}</td>
+                      <td className={`whitespace-nowrap px-4 py-2 text-right ${d > 0 ? 'text-emerald-700' : d < 0 ? 'text-rose-700' : 'text-gray-500'}`}>
+                        {signed(d)}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <Change prev={get(c, 'a', 'kpi_value')} cur={get(c, 'b', 'kpi_value')} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="sticky bottom-0 border-t-2 border-sky-200 bg-sky-50 font-bold text-gray-800">
+                <tr>
+                  <td className="px-4 py-3" colSpan={2}>
+                    รวมทั้งหมด ({num(rows.length)})
+                  </td>
+                  <td className="px-4 py-3 text-right">{num(sums.a[uc])}</td>
+                  <td className="px-4 py-3 text-right">{num(sums.b[uc])}</td>
+                  <td className="px-4 py-3 text-right">{num(sums.a.kpi_value)}</td>
+                  <td className="px-4 py-3 text-right">{num(sums.b.kpi_value)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right">{signed(diff)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <Change prev={sums.a.kpi_value} cur={sums.b.kpi_value} />
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </>
+      )}
     </section>
   );
 }
