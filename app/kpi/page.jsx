@@ -30,6 +30,7 @@ import {
 } from '@/lib/kpi';
 import { MAX_RETRIES, cronEnabled, ensureImported, fetchInProgress } from '@/lib/scheduler';
 import kpiLib from '@/scripts/kpi-lib';
+import { userFor } from '@/lib/auth';
 import { checkFetch, fetchNow, selectFile, selectYears } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -156,19 +157,18 @@ export default async function KpiPage({ searchParams }) {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-teal-900/20" />
-        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-emerald-500/20 blur-3xl" />
+      <section className="relative overflow-hidden border-b border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-emerald-200/50 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-4 py-10 md:py-14">
-          <span className="badge mb-4 border border-emerald-500/30 bg-emerald-500/20 px-4 py-1 text-sm text-emerald-300">
+          <span className="badge mb-4 border border-emerald-200 bg-emerald-100 px-4 py-1 text-sm text-emerald-700">
             ตัวชี้วัด · {VIEWS[q.view].label}
             {prevYear ? ` · เทียบปีงบประมาณ ${years.join(' · ')}` : ` · ปีงบประมาณ ${curYear}`}
           </span>
-          <h1 className="mb-1 text-3xl font-bold text-white md:text-4xl">{KPI_NAME}</h1>
+          <h1 className="mb-1 text-3xl font-bold text-gray-800 md:text-4xl">{KPI_NAME}</h1>
           {report && (
-            <p className="mb-6 text-lg text-gray-300">
-              <span className="font-semibold text-emerald-300">{report.area.title}</span>
-              {report.area.subtitle && <span className="text-gray-400"> · {report.area.subtitle}</span>}
+            <p className="mb-6 text-lg text-gray-600">
+              <span className="font-semibold text-emerald-700">{report.area.title}</span>
+              {report.area.subtitle && <span className="text-gray-500"> · {report.area.subtitle}</span>}
             </p>
           )}
 
@@ -177,24 +177,24 @@ export default async function KpiPage({ searchParams }) {
               {years.slice(0, -1).map((y) => (
                 <div key={y} className="contents">
                   <div>
-                    <div className="text-sm text-gray-400">ปี {y}</div>
-                    <div className="text-2xl font-bold text-gray-200 md:text-3xl">
-                      {num(T(y).kpi_value)} <span className="text-base font-normal text-gray-400">บาท</span>
+                    <div className="text-sm text-gray-500">ปี {y}</div>
+                    <div className="text-2xl font-bold text-gray-700 md:text-3xl">
+                      {num(T(y).kpi_value)} <span className="text-base font-normal text-gray-500">บาท</span>
                     </div>
                   </div>
-                  <div className="hidden text-3xl text-gray-500 md:block">→</div>
+                  <div className="hidden text-3xl text-gray-300 md:block">→</div>
                 </div>
               ))}
               <div>
-                <div className="text-sm text-gray-400">ปี {curYear}</div>
-                <div className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
-                  {num(cur.kpi_value)} <span className="text-base font-normal text-gray-300">บาท</span>
+                <div className="text-sm text-gray-500">ปี {curYear}</div>
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
+                  {num(cur.kpi_value)} <span className="text-base font-normal text-gray-500">บาท</span>
                 </div>
               </div>
               {prevYear && (
                 <div>
                   <Change prev={prev.kpi_value} cur={cur.kpi_value} size="lg" />
-                  <div className="mt-1 text-sm text-gray-400">
+                  <div className="mt-1 text-sm text-gray-500">
                     {diff >= 0 ? 'เพิ่มขึ้น' : 'ลดลง'} {num(Math.abs(diff))} บาท จากปี {prevYear}
                   </div>
                 </div>
@@ -217,6 +217,7 @@ export default async function KpiPage({ searchParams }) {
           fetching={fetchInProgress()}
           roundText={roundText()}
           selectAction={selectFile}
+          canFetch={Boolean(await userFor('fetch'))}
           checkAction={checkFetch}
           fetchAction={fetchNow}
         />

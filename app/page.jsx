@@ -21,34 +21,33 @@ export default function Home() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-teal-900/20" />
-        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-teal-500/20 blur-3xl" />
+      <section className="relative overflow-hidden border-b border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-emerald-200/50 blur-3xl" />
+        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-teal-200/50 blur-3xl" />
         <div className="relative mx-auto max-w-4xl px-4 py-20 text-center md:py-28">
-          <span className="badge mb-6 border border-emerald-500/30 bg-emerald-500/20 px-4 py-1 text-sm text-emerald-300">
+          <span className="badge mb-6 border border-emerald-200 bg-emerald-100 px-4 py-1 text-sm text-emerald-700">
             รหัสยาแผนไทย 24 หลัก × TTMT × Drug Group
           </span>
-          <h1 className="mb-4 text-4xl font-bold text-white md:text-5xl">
+          <h1 className="mb-4 text-4xl font-bold text-gray-800 md:text-5xl">
             ค้นหารหัส
-            <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
               ยาสมุนไพร
             </span>
           </h1>
-          <p className="mx-auto mb-10 max-w-2xl text-lg text-gray-300">
+          <p className="mx-auto mb-10 max-w-2xl text-lg text-gray-600">
             รวมข้อมูลจากกรมการแพทย์แผนไทยและการแพทย์ทางเลือก และ สมสท. ไว้ในที่เดียว
             ดูได้ทันทีว่ายาแต่ละรายการมีรหัส 24 หลัก, TTMTID และอยู่ใน Drug Group ใด
           </p>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur">
+          <div className="rounded-2xl border border-emerald-100 bg-white/70 p-3 shadow-lg shadow-emerald-900/5 backdrop-blur">
             <SearchForm />
           </div>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-sm">
-            <span className="text-gray-400">ตัวอย่าง:</span>
+            <span className="text-gray-500">ตัวอย่าง:</span>
             {EXAMPLES.map((e) => (
               <Link
                 key={e}
                 href={`/search?q=${encodeURIComponent(e)}`}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-gray-300 transition-colors hover:border-emerald-400 hover:text-emerald-300"
+                className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-gray-600 transition-colors hover:border-emerald-400 hover:text-emerald-700"
               >
                 {e}
               </Link>

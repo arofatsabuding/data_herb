@@ -56,9 +56,18 @@ async function main() {
     await get(css);
     return css;
   });
-  for (const path of ['/search?q=' + encodeURIComponent('ขมิ้นชัน'), '/groups', '/kpi', '/stats', '/api-docs', '/api-docs/swagger', '/llms.txt']) {
+  for (const path of ['/search?q=' + encodeURIComponent('ขมิ้นชัน'), '/groups', '/kpi', '/stats', '/api-docs', '/api-docs/swagger', '/llms.txt', '/login', '/admin', '/dev', '/privacy', '/terms']) {
     await check(`หน้า ${decodeURIComponent(path)}`, () => get(path).then(() => ''));
   }
+
+  // เข้าสู่ระบบ — ยังไม่ login ต้องได้ user = null และหน้าที่ต้อง login ไม่แสดงเนื้อหา
+  await check('GET /api/auth/me (ยังไม่ login)', async () => {
+    const j = await getJson('/api/auth/me');
+    assert(j.user === null, 'ยังไม่ login แต่ได้ข้อมูลผู้ใช้');
+    const html = await (await get('/admin')).text();
+    assert(!html.includes('ไฟล์ข้อมูลอ้างอิง'), 'หน้า /admin แสดงเนื้อหาโดยไม่ต้อง login');
+    return '';
+  });
 
   // REST API
   await check('GET /api/v1', async () => {

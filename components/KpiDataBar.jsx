@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 const time = (iso) =>
@@ -98,8 +99,8 @@ function YearCompare({ compare, action }) {
   );
 }
 
-// ปุ่มดึงรายงาน ณ ปัจจุบัน → ตรวจว่ามีคนดึงอยู่ไหม → กรอกรหัสยืนยัน → ตกลง
-function FetchNow({ fetching, checkAction, fetchAction }) {
+// ปุ่มดึงรายงาน ณ ปัจจุบัน (ต้อง login) → ตรวจว่ามีคนดึงอยู่ไหม → ยืนยัน → ตกลง
+function FetchNow({ canFetch, fetching, checkAction, fetchAction }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(null);
@@ -131,19 +132,10 @@ function FetchNow({ fetching, checkAction, fetchAction }) {
     <div className="flex flex-col gap-1 text-sm md:w-80">
       <span className="text-gray-600">ดึงรายงาน ณ ปัจจุบัน (ไม่ต้องรอ 22:00)</span>
       {open ? (
-        <form action={formAction} className="flex gap-2">
-          <input
-            type="password"
-            name="code"
-            required
-            autoFocus
-            autoComplete="off"
-            placeholder="รหัสยืนยัน"
-            aria-label="รหัสยืนยัน"
-            className="input min-w-0 flex-1 text-sm"
-          />
+        <form action={formAction} className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 text-gray-700">ยืนยันดึงรายงานตอนนี้?</span>
           <button type="submit" disabled={pending} className="btn-primary px-4 text-sm disabled:opacity-50">
-            {pending ? 'กำลังตรวจ…' : 'ตกลง'}
+            {pending ? 'กำลังเริ่ม…' : 'ตกลง'}
           </button>
           <button
             type="button"
@@ -153,6 +145,10 @@ function FetchNow({ fetching, checkAction, fetchAction }) {
             ยกเลิก
           </button>
         </form>
+      ) : !canFetch && !running ? (
+        <Link href="/login?next=%2Fkpi" className="btn-primary text-center text-sm">
+          เข้าสู่ระบบเพื่อดึงรายงาน
+        </Link>
       ) : (
         <button
           type="button"
@@ -181,7 +177,7 @@ function FetchNow({ fetching, checkAction, fetchAction }) {
   );
 }
 
-export default function KpiDataBar({ compare, compareAction, years, fetching, roundText, selectAction, checkAction, fetchAction }) {
+export default function KpiDataBar({ compare, compareAction, years, fetching, roundText, selectAction, canFetch, checkAction, fetchAction }) {
   return (
     <div className="card mb-6 p-5">
       {compare.all.length > 2 && (
@@ -193,7 +189,7 @@ export default function KpiDataBar({ compare, compareAction, years, fetching, ro
             <YearSelect key={`${y.year}:${y.choice}`} y={y} action={selectAction} />
           ))}
         </div>
-        <FetchNow fetching={fetching} checkAction={checkAction} fetchAction={fetchAction} />
+        <FetchNow canFetch={canFetch} fetching={fetching} checkAction={checkAction} fetchAction={fetchAction} />
       </div>
       {roundText && <div className="mt-3 text-xs text-gray-500">{roundText}</div>}
     </div>

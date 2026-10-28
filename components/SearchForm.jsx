@@ -15,8 +15,9 @@ export default function SearchForm({
 }) {
   return (
     <form action="/search" method="get" className={compact ? 'card p-4' : ''}>
-      <div className="flex flex-col gap-3 md:flex-row">
-        <div className="relative flex-1">
+      {/* แบบละเอียด (หน้าข้อมูลยา): จอกลางให้ช่องค้นหาเต็มแถว ตัวกรองขึ้นแถวใหม่ · จอใหญ่เรียงแถวเดียว */}
+      <div className={`flex flex-col gap-3 md:flex-row ${compact ? 'md:flex-wrap lg:flex-nowrap' : ''}`}>
+        <div className={`relative flex-1 ${compact ? 'md:basis-full lg:basis-0' : ''}`}>
           <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
           <input
             name="q"
@@ -28,17 +29,17 @@ export default function SearchForm({
         </div>
         {compact && (
           <>
-            <select name="type" defaultValue={type} className="input md:w-40">
+            <select name="type" defaultValue={type} className="input md:flex-1 lg:flex-none lg:w-40">
               <option value="">ทุกประเภท</option>
               <option value="เดี่ยว">ยาเดี่ยว</option>
               <option value="ตำรับ">ยาตำรับ</option>
             </select>
-            <select name="group" defaultValue={group} className="input md:w-52">
+            <select name="group" defaultValue={group} className="input md:flex-1 lg:flex-none lg:w-52">
               <option value="">ทุกสถานะ Drug Group</option>
               <option value="has">มี Drug Group</option>
               <option value="none">ไม่มี Drug Group</option>
             </select>
-            <select name="unit" defaultValue={unit} className="input md:w-44">
+            <select name="unit" defaultValue={unit} className="input md:flex-1 lg:flex-none lg:w-44">
               <option value="">ทุกหน่วยเบิก</option>
               <option value="บาท">เบิกเป็นบาท</option>
               <option value="point">เบิกเป็น point</option>

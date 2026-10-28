@@ -1,8 +1,8 @@
 import AdminFiles from '@/components/AdminFiles';
-import { AdminLoginForm } from '@/components/AdminLogin';
+import LoginRequired from '@/components/LoginRequired';
 import SystemFiles from '@/components/SystemFiles';
 import { downloadHref, listSystemFiles } from '@/lib/system-files';
-import { adminConfigured, isAdmin } from '@/lib/admin-auth';
+import { currentUser, allowed } from '@/lib/auth';
 import { referenceStatus } from '@/lib/scheduler';
 import refs from '@/scripts/reference-files';
 import { uploadReference } from './actions';
@@ -15,27 +15,9 @@ const when = (t) =>
   new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }) + ' น.';
 
 export default async function AdminPage() {
-  if (!adminConfigured()) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-16">
-        <div className="card p-6 text-center text-gray-600">
-          ปิดหน้าผู้ดูแลระบบอยู่ — เซิร์ฟเวอร์ยังไม่ได้ตั้งรหัส (<span className="mono">ADMIN_PAGE_CODE</span> ใน .env)
-        </div>
-      </div>
-    );
-  }
-  // เข้าตรงด้วย URL โดยยังไม่ได้กรอกรหัส → แสดงช่องกรอกรหัสก่อน
-  if (!(await isAdmin())) {
-    return (
-      <div className="mx-auto max-w-sm px-4 py-16">
-        <div className="card p-6">
-          <h1 className="mb-1 text-lg font-bold text-gray-800">เข้าสู่หน้าผู้ดูแลระบบ</h1>
-          <p className="mb-4 text-sm text-gray-600">กรุณากรอกรหัสผู้ดูแล</p>
-          <AdminLoginForm />
-        </div>
-      </div>
-    );
-  }
+  // ต้อง login ด้วย ThaiD ก่อน (สิทธิ์ขั้นต่ำตั้งที่ ACCESS.admin ใน lib/auth.js)
+  const user = await currentUser();
+  if (!allowed(user, 'admin')) return <LoginRequired next="/admin" title="เข้าสู่หน้าผู้ดูแลระบบ" user={user} />;
 
   const status = referenceStatus();
   const files = refs.listReferences().map((f) => ({ ...f, href: f.file ? downloadHref('pub', f.file) : null }));

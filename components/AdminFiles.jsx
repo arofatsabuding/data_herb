@@ -1,14 +1,14 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 const size = (n) => (n === null ? '-' : n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`);
 const when = (t) =>
   t ? new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }) + ' น.' : '-';
 
-// ฟอร์มอัปโหลดของไฟล์ 1 รายการ — รหัสผู้ดูแลรับมาจากช่องด้านบน (กรอกครั้งเดียวใช้ได้ทุกไฟล์)
-function UploadForm({ f, code, action }) {
+// ฟอร์มอัปโหลดของไฟล์ 1 รายการ (สิทธิ์ตรวจจาก session ที่ server)
+function UploadForm({ f, action }) {
   const router = useRouter();
   const formRef = useRef(null);
   const [state, formAction, pending] = useActionState(action, null);
@@ -23,7 +23,6 @@ function UploadForm({ f, code, action }) {
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-2">
       <input type="hidden" name="key" value={f.key} />
-      <input type="hidden" name="code" value={code} />
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
           type="file"
@@ -35,7 +34,7 @@ function UploadForm({ f, code, action }) {
         />
         <button
           type="submit"
-          disabled={pending || !code}
+          disabled={pending}
           className="btn-primary px-5 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? 'กำลังตรวจไฟล์…' : 'อัปโหลดแทนไฟล์เดิม'}
@@ -49,7 +48,6 @@ function UploadForm({ f, code, action }) {
 
 export default function AdminFiles({ files, busy, action }) {
   const router = useRouter();
-  const [code, setCode] = useState('');
 
   // ระหว่างสร้างฐานข้อมูลใหม่ รีเฟรชทุก 5 วินาทีเพื่ออัปเดตสถานะ
   useEffect(() => {
@@ -60,21 +58,6 @@ export default function AdminFiles({ files, busy, action }) {
 
   return (
     <>
-      <div className="card mb-6 flex flex-col gap-2 p-5 sm:flex-row sm:items-center">
-        <label htmlFor="admin-code" className="text-sm font-semibold text-gray-700 sm:w-40">
-          รหัสผู้ดูแล
-        </label>
-        <input
-          id="admin-code"
-          type="password"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          autoComplete="off"
-          placeholder="กรอกก่อนอัปโหลด (ใช้ได้ทุกไฟล์ในหน้านี้)"
-          className="input min-w-0 flex-1 text-sm"
-        />
-      </div>
-
       <div className="space-y-4">
         {files.map((f) => (
           <section key={f.key} className="card p-5">
@@ -133,7 +116,7 @@ export default function AdminFiles({ files, busy, action }) {
               </div>
             </dl>
 
-            <UploadForm f={f} code={code} action={action} />
+            <UploadForm f={f} action={action} />
           </section>
         ))}
       </div>

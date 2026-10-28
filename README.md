@@ -18,8 +18,10 @@
 | ข้อมูลยา | `/search`, `/drug/[id]` | ค้นหา/กรอง (ประเภท, Drug Group, หน่วยเบิก, ชื่อยา, ผู้ผลิต, รหัสที่มาของยา) + รายละเอียดยา |
 | Drug Group | `/groups` | รายการ Drug Group พร้อมอัตราเบิก |
 | ตัวชี้วัด | `/kpi` | มูลค่ายาสมุนไพรในสิทธิ UC เทียบ 2 ปีล่าสุด หรือติ๊กเลือกปีที่จะเทียบเอง (เช่น 2568 · 2569 · 2570) + อัตรารหัสยาที่ผิดพลาด + รหัส 24 หลักที่ไม่พบ |
-| สรุป | `/stats` | สรุปตัวชี้วัดระดับประเทศ + สถิติฐานข้อมูลยา |
-| ผู้ดูแลระบบ | `/admin` | อัปโหลดไฟล์อ้างอิง / ดาวน์โหลดไฟล์ระบบ (ต้องใส่รหัส) |
+| สรุป | `/stats` | สรุปตัวชี้วัดระดับประเทศ + สถิติฐานข้อมูลยา (ต้องเข้าสู่ระบบ) |
+| ผู้ดูแลระบบ | `/admin` | อัปโหลดไฟล์อ้างอิง / ดาวน์โหลดไฟล์ระบบ (ต้องเข้าสู่ระบบด้วย ThaiD) |
+| เข้าสู่ระบบ / ผู้พัฒนา | `/login`, `/dev` | เข้าสู่ระบบด้วย ThaiD · หน้าผู้พัฒนา (เฉพาะ `THAID_DEV_CIDS`): รายชื่อผู้ใช้, role, ประวัติเข้าใช้ |
+| (footer) นโยบาย / ข้อกำหนด | `/privacy`, `/terms` | นโยบายความเป็นส่วนตัว (PDPA) และข้อกำหนดการใช้งาน — เนื้อหาต้องตรงกับที่ระบบเก็บจริง |
 | (footer) API / MCP | `/api-docs` | วิธีให้ AI หรือระบบอื่นดึงข้อมูล |
 | ทดสอบ API | `/api-docs/swagger` | Swagger UI — เรียก REST API จริงจากเบราว์เซอร์ (มีค่าตัวอย่างให้) |
 
@@ -38,7 +40,7 @@ cp .env.example .env      # Windows: copy .env.example .env
 
 `npm run dev` ไม่ดึงข้อมูลอัตโนมัติ 22:00 (ดึงเฉพาะเซิร์ฟเวอร์จริงที่รัน `npm start`) — ไม่ต้องตั้งอะไรเพิ่ม
 
-รหัสต่าง ๆ (`FETCH_NOW_CODE`, `ADMIN_CODE`, `ADMIN_PAGE_CODE`) ขอจากผู้ดูแลโปรเจกต์ — ไม่ต้องใส่ก็รันได้ แต่ปุ่มที่ต้องใช้รหัสจะใช้ไม่ได้
+ค่าเชื่อมต่อ ThaiD (`THAID_CLIENT_ID`, `THAID_CLIENT_SECRET`, `THAID_REDIRECT_URI`) ขอจากผู้ดูแลโปรเจกต์ — ไม่ต้องใส่ก็รันได้ แต่เข้าสู่ระบบไม่ได้ (หน้าสรุป, ผู้ดูแล, ปุ่มดึงรายงานใช้ไม่ได้)
 
 สร้างฐานข้อมูล (ไม่อยู่ใน git) แล้วเปิดเว็บ:
 
@@ -133,7 +135,7 @@ git push -u origin feat/<เรื่องที่ทำ> && gh pr create
 - เริ่มเองเมื่อเปิดเว็บ (`instrumentation.js` → `lib/scheduler.js`) · log: `logs/opendata-YYYY-MM-DD.log` · สถานะ: `data/fetch-status.json` (แสดงในหน้า /kpi)
 - บันทึกไฟล์เฉพาะเมื่อดึงครบ 77 จังหวัด · ไม่สำเร็จ → ลองใหม่ 5 ครั้ง ห่าง 10 นาที ครบแล้วยังไม่ได้ = วันนั้น "ไม่มีรายงาน"
 - ดึงได้ครั้งละ 1 งาน (`data/fetch.lock`) · เซิร์ฟเวอร์ปิดอยู่ตอน 22:00 → เริ่มรอบนั้น 1 นาทีหลังเปิด
-- **ดึงรายงาน ณ ปัจจุบัน**: ปุ่มในหน้า /kpi (ต้องใส่ `FETCH_NOW_CODE`) หรือ `npm run fetch:opendata`
+- **ดึงรายงาน ณ ปัจจุบัน**: ปุ่มในหน้า /kpi (ต้องเข้าสู่ระบบก่อน) หรือ `npm run fetch:opendata`
 
 ## สำหรับ AI และระบบภายนอก
 
@@ -172,9 +174,12 @@ curl -X POST https://herb.thaipadi.com/api/v1/drugs/check -H "Content-Type: appl
 
 | ตัวแปร | ค่าเริ่มต้น | ความหมาย |
 |---|---|---|
-| `FETCH_NOW_CODE` | (ไม่ตั้ง = ปุ่มใช้ไม่ได้) | รหัสยืนยันปุ่ม "ดึงรายงาน ณ ปัจจุบัน" |
-| `ADMIN_PAGE_CODE` | `admin` เฉพาะ `npm run dev` · เซิร์ฟเวอร์จริงไม่ตั้ง = ปิดหน้าผู้ดูแล | รหัสเข้าเมนูผู้ดูแลระบบ — **เซิร์ฟเวอร์จริงควรตั้งเสมอ** |
-| `ADMIN_CODE` | ใช้ `FETCH_NOW_CODE` | รหัสยืนยันการอัปโหลดไฟล์อ้างอิง |
+| `THAID_CLIENT_ID` / `THAID_CLIENT_SECRET` | (ไม่ตั้ง = เข้าสู่ระบบไม่ได้) | ค่าที่ได้จาก ThaiD |
+| `THAID_REDIRECT_URI` | — | ต้องตรงกับที่ลงทะเบียนกับ ThaiD: `https://<โดเมน>/api/auth/thaid/callback` หรือ `https://<โดเมน>/login` |
+| `THAID_URL` / `THAID_SCOPE` | `https://imauth.bora.dopa.go.th` / `pid name name_en` | ปลายทาง ThaiD / ข้อมูลที่ขอ |
+| `THAID_DEV_CIDS` | (ไม่ตั้ง = ไม่มีใครเข้า /dev) | เลขบัตรผู้พัฒนา คั่นด้วย `,` — เข้าหน้า /dev (รายชื่อผู้ใช้, role, ประวัติเข้าใช้) |
+| `SITE_CONTACT_EMAIL` | (ไม่ตั้ง = ให้ติดต่อผู้ดูแลระบบของหน่วยงาน) | อีเมลติดต่อในหน้า /privacy และ /terms |
+| `SESSION_SECRET` | สุ่มเก็บที่ `data/session-secret` | secret ของ cookie เข้าสู่ระบบ (8 ชั่วโมง) |
 | `OPENDATA_CRON` | เปิดเฉพาะ `npm start` | `on` / `off` = บังคับเปิด/ปิดการดึงอัตโนมัติ |
 | `OPENDATA_CRON_TIME` | `0 22 * * *` | เวลาดึง (cron) |
 | `OPENDATA_FETCH_YEAR` / `OPENDATA_FALLBACK_YEAR` | `auto` / 2569 | ปีที่ดึง / ปีที่ใช้แทนเมื่อยังไม่มีข้อมูล (`none` = ไม่ดึง) |
@@ -188,11 +193,11 @@ app/                 หน้าเว็บ + API (Next.js App Router)
   api/v1/ api/mcp/                REST API / MCP
   api/export/ api/kpi/ api/admin/ ดาวน์โหลด Excel / ไฟล์ระบบ
   llms.txt/
-components/          ส่วนประกอบหน้าเว็บ (ExcelButton, NavLinks, Kpi*, …)
+components/          ส่วนประกอบหน้าเว็บ (ExcelButton, SiteNav, Kpi*, …)
 lib/                 drugs.js, kpi.js, agent-tools.js, scheduler.js, excel.js, db.js, …
 scripts/             import.js + schema.sql, import-kpi.js + kpi-lib.js, fetch-opendata.js, reference-files.js
 publicfiles/         ไฟล์ Excel ต้นทาง (opendata-2570/*.xlsx ไม่อยู่ใน git)
-data/                herb.db, kpi.db, สถานะการดึงข้อมูล (ไม่อยู่ใน git)
+data/                herb.db, kpi.db, auth.db (ผู้ใช้ที่เข้าสู่ระบบ), สถานะการดึงข้อมูล (ไม่อยู่ใน git)
 logs/                log การดึงข้อมูล (ไม่อยู่ใน git)
 ```
 
