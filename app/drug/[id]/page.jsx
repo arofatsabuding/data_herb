@@ -44,15 +44,15 @@ export default async function DrugPage({ params }) {
       </div>
 
       {/* หัวเรื่อง + รหัสสำคัญ */}
-      <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 p-6 text-white shadow-lg md:p-8">
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/20 blur-3xl" />
+      <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 p-6 text-white shadow-lg shadow-emerald-500/20 md:p-8">
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/20 blur-3xl" />
         <div className="relative">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <TypeBadge type={drug.drug_type} />
             <GroupBadge drug={drug} />
           </div>
           <h1 className="mb-1 text-3xl font-bold">{drug.drug_name}</h1>
-          <p className="mb-6 text-gray-300">{drug.manufacturer}</p>
+          <p className="mb-6 text-emerald-50">{drug.manufacturer}</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               ['รหัสยาแผนไทย 24 หลัก', drug.code24],
@@ -60,8 +60,8 @@ export default async function DrugPage({ params }) {
               ['Drug Group (สปสช.)', drug.has_drug_group ? drug.drug_group : 'ไม่มี Drug Group'],
               ['เบิกได้ / course', formatRate(drug.reimburse_amount, drug.reimburse_unit) || 'ไม่มีอัตราเบิก'],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs text-emerald-300">{label}</div>
+              <div key={label} className="rounded-xl border border-white/30 bg-white/15 p-4">
+                <div className="text-xs text-emerald-50">{label}</div>
                 <div className={`break-all text-lg font-semibold ${/^[0-9A-Z]+$/.test(value) ? 'mono' : ''}`}>{value}</div>
               </div>
             ))}

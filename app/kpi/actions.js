@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { PREF_COOKIE, YEARS_COOKIE, availableYears, getDatasets, parsePrefs, parseYears } from '@/lib/kpi';
 import { ensureImported, fetchInProgress, runFetchNow } from '@/lib/scheduler';
-import { checkCode } from '@/lib/confirm-code';
+import { userFor } from '@/lib/auth';
 import kpiLib from '@/scripts/kpi-lib';
 
 // เลือกไฟล์ข้อมูลของปีนั้น (เก็บใน cookie ของเบราว์เซอร์ — ไม่กระทบผู้ใช้คนอื่น)
@@ -46,12 +46,11 @@ export async function checkFetch() {
   return { busy: fetchInProgress() };
 }
 
-// ดึงรายงาน ณ ปัจจุบัน โดยไม่รอ 22:00 — ต้องกรอกรหัสยืนยัน (FETCH_NOW_CODE ใน .env)
-export async function fetchNow(prevState, formData) {
+// ดึงรายงาน ณ ปัจจุบัน โดยไม่รอ 22:00 — ต้อง login ด้วย ThaiD ก่อน (ACCESS.fetch)
+export async function fetchNow() {
+  if (!(await userFor('fetch'))) return { error: 'กรุณาเข้าสู่ระบบก่อนดึงรายงาน' };
   const busy = fetchInProgress();
   if (busy) return { busy };
-  const check = await checkCode(formData.get('code'), ['FETCH_NOW_CODE']);
-  if (check.error) return { error: check.wrong ? 'รหัสยืนยันไม่ถูกต้อง — ไม่ได้ดึงข้อมูล' : check.error };
   // ตรวจซ้ำอีกครั้งตอนสั่ง เผื่อมีคนกดพร้อมกัน
   if (!runFetchNow()) return { busy: fetchInProgress() || { by: 'ผู้ใช้อื่น' } };
   return { started: true };

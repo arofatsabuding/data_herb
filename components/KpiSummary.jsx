@@ -129,7 +129,7 @@ export default function KpiSummary({ sets }) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="card overflow-hidden lg:col-span-2">
+        <div className="card min-w-0 overflow-hidden lg:col-span-2">
           <h3 className="border-b border-gray-100 px-6 py-4 text-lg font-bold text-gray-800">แยกตามเขตสุขภาพ</h3>
           <div className="overflow-x-auto">
             <table id="kpi-summary-zones" className="w-full text-sm">

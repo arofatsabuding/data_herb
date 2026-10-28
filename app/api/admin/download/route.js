@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
-import { isAdmin } from '@/lib/admin-auth';
+import { userFor } from '@/lib/auth';
 import { resolveSystemFile } from '@/lib/system-files';
 
 export const dynamic = 'force-dynamic';
@@ -13,9 +13,9 @@ const TYPES = {
   '.json': 'application/json',
 };
 
-// ดาวน์โหลดไฟล์ในระบบ — เฉพาะผู้ที่กรอกรหัสเข้าหน้าผู้ดูแลแล้ว
+// ดาวน์โหลดไฟล์ในระบบ — เฉพาะผู้ที่ login และมีสิทธิ์หน้าผู้ดูแล
 export async function GET(request) {
-  if (!(await isAdmin())) return new Response('ต้องกรอกรหัสผู้ดูแลก่อน', { status: 401 });
+  if (!(await userFor('admin'))) return new Response('ต้องเข้าสู่ระบบก่อน', { status: 401 });
   const sp = request.nextUrl.searchParams;
   const abs = resolveSystemFile(sp.get('dir'), sp.get('file'));
   if (!abs) return new Response('ไม่พบไฟล์', { status: 404 });

@@ -6,6 +6,7 @@ import './globals.css';
 import { Suspense } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import HideOnPaths from '@/components/HideOnPaths';
 import NavProgress from '@/components/NavProgress';
 
 export const metadata = {
@@ -22,7 +23,10 @@ export default function RootLayout({ children }) {
         </Suspense>
         <Header />
         <main className="flex-1">{children}</main>
-        <Footer />
+        {/* หน้า login ไม่แสดง footer */}
+        <HideOnPaths paths={['/login']}>
+          <Footer />
+        </HideOnPaths>
       </body>
     </html>
   );

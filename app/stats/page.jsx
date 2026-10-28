@@ -2,6 +2,8 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import ExcelButton from '@/components/ExcelButton';
 import KpiSummary from '@/components/KpiSummary';
+import LoginRequired from '@/components/LoginRequired';
+import { allowed, currentUser } from '@/lib/auth';
 import { getBreakdown, getStats } from '@/lib/drugs';
 import { kpiAvailable, setsFromCookies } from '@/lib/kpi';
 
@@ -14,50 +16,54 @@ const pct = (a, b) => (b ? ((a / b) * 100).toFixed(1) : '0.0');
 
 function BreakdownTable({ id, title, rows, param = 'q' }) {
   return (
-    <section className="card overflow-hidden">
+    <section className="card min-w-0 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-6 py-4">
         <h2 className="text-lg font-bold text-gray-800">{title}</h2>
         <ExcelButton tables={[{ id, name: title }]} filename={`stats_${id}`} />
       </div>
-      <table id={id} className="w-full text-sm">
-        <thead className="bg-gradient-to-r from-emerald-50 to-teal-50 text-left text-emerald-900">
-          <tr>
-            <th className="px-6 py-2 font-semibold" data-excel={title}></th>
-            <th className="px-3 py-2 text-right font-semibold">ทั้งหมด</th>
-            <th className="px-6 py-2 font-semibold">มี Drug Group</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {rows.map((r) => (
-            <tr key={r.label} className="hover:bg-emerald-50/50">
-              <td className="px-6 py-2">
-                <Link href={`/search?${param}=${encodeURIComponent(r.label)}`} className="hover:text-emerald-600">
-                  {r.label}
-                </Link>
-              </td>
-              <td className="px-3 py-2 text-right">{fmt(r.total)}</td>
-              <td className="px-6 py-2">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-24 overflow-hidden rounded-full bg-gray-100">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-600"
-                      style={{ width: `${pct(r.with_group, r.total)}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-600">
-                    {fmt(r.with_group)} ({pct(r.with_group, r.total)}%)
-                  </span>
-                </div>
-              </td>
+      <div className="overflow-x-auto">
+        <table id={id} className="w-full text-sm">
+          <thead className="bg-gradient-to-r from-emerald-50 to-teal-50 text-left text-emerald-900">
+            <tr>
+              <th className="px-6 py-2 font-semibold" data-excel={title}></th>
+              <th className="px-3 py-2 text-right font-semibold">ทั้งหมด</th>
+              <th className="px-6 py-2 font-semibold">มี Drug Group</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {rows.map((r) => (
+              <tr key={r.label} className="hover:bg-emerald-50/50">
+                <td className="px-6 py-2">
+                  <Link href={`/search?${param}=${encodeURIComponent(r.label)}`} className="hover:text-emerald-600">
+                    {r.label}
+                  </Link>
+                </td>
+                <td className="px-3 py-2 text-right">{fmt(r.total)}</td>
+                <td className="px-6 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-24 overflow-hidden rounded-full bg-gray-100">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-600"
+                        style={{ width: `${pct(r.with_group, r.total)}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-600">
+                      {fmt(r.with_group)} ({pct(r.with_group, r.total)}%)
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
 
 export default async function StatsPage() {
+  const user = await currentUser();
+  if (!allowed(user, 'stats')) return <LoginRequired next="/stats" title="หน้าสรุป" user={user} />;
   const s = getStats();
   // ตัวชี้วัดใช้ไฟล์ตามที่ผู้ใช้คนนี้เลือกไว้ในหน้า /kpi (ไฟล์ที่ยังไม่ได้นำเข้า → ใช้ไฟล์ที่มี)
   const sets = kpiAvailable() ? setsFromCookies(await cookies()) : [];
@@ -112,7 +118,7 @@ export default async function StatsPage() {
           rows={s.byType.map((t) => ({ label: t.drug_type, total: t.total, with_group: t.with_group }))}
         />
         <BreakdownTable id="dosage_form" title="รูปแบบยา (15 อันดับแรก)" rows={getBreakdown('dosage_form')} />
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <BreakdownTable id="manufacturer" title="ผู้ผลิต (15 อันดับแรก)" rows={getBreakdown('manufacturer')} />
         </div>
       </div>

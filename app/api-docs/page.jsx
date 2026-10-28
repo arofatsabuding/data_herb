@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'API สำหรับ AI — HERB Center' };
 
 function Code({ children }) {
-  return <pre className="mono overflow-x-auto rounded-xl bg-navy-900 p-4 text-sm text-emerald-200">{children}</pre>;
+  return <pre className="mono overflow-x-auto rounded-xl border border-emerald-100 bg-slate-50 p-4 text-sm text-emerald-900">{children}</pre>;
 }
 
 export default async function ApiDocsPage() {
@@ -43,7 +43,7 @@ export default async function ApiDocsPage() {
         <h2 className="text-lg font-semibold text-emerald-800">2. REST API (JSON)</h2>
         <p className="text-sm text-gray-600">
           เอกสาร OpenAPI:{' '}
-          <a className="mono text-emerald-700 underline" href="/api/v1/openapi.json">
+          <a className="mono break-all text-emerald-700 underline" href="/api/v1/openapi.json">
             {origin}/api/v1/openapi.json
           </a>{' '}
           (ใช้กับ ChatGPT Actions หรือเครื่องมืออื่นที่อ่าน OpenAPI ได้)

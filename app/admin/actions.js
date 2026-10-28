@@ -1,24 +1,20 @@
 'use server';
 
 import path from 'path';
-import { isAdmin } from '@/lib/admin-auth';
-import { checkCode } from '@/lib/confirm-code';
+import { userFor } from '@/lib/auth';
 import { rebuildReferences } from '@/lib/scheduler';
 import refs from '@/scripts/reference-files';
 
 const MAX_SIZE = 50 * 1024 * 1024;
 
 // อัปโหลดไฟล์อ้างอิงใหม่แทนไฟล์เดิม → ตรวจรูปแบบไฟล์ก่อน แล้วสร้างฐานข้อมูลใหม่เบื้องหลัง
-// ต้องกรอกรหัสผู้ดูแล (ADMIN_CODE ใน .env — ถ้าไม่ได้ตั้ง ใช้ FETCH_NOW_CODE)
+// ต้อง login ด้วย ThaiD และมีสิทธิ์หน้าผู้ดูแล (ACCESS.admin)
 export async function uploadReference(prevState, formData) {
-  if (!(await isAdmin())) return { error: 'หมดเวลาเข้าหน้าผู้ดูแล — กรุณารีเฟรชหน้าแล้วกรอกรหัสใหม่' };
+  if (!(await userFor('admin'))) return { error: 'หมดเวลาเข้าสู่ระบบ — กรุณารีเฟรชหน้าแล้วเข้าสู่ระบบใหม่' };
   const ref = refs.getRef(String(formData.get('key') || ''));
   if (!ref) return { error: 'ไม่รู้จักไฟล์ที่เลือก' };
   const file = formData.get('file');
   if (!file || typeof file === 'string' || !file.size) return { error: 'กรุณาเลือกไฟล์' };
-
-  const check = await checkCode(formData.get('code'), ['ADMIN_CODE', 'FETCH_NOW_CODE']);
-  if (check.error) return { error: check.wrong ? 'รหัสผู้ดูแลไม่ถูกต้อง — ไม่ได้เปลี่ยนไฟล์' : check.error };
 
   const ext = path.extname(file.name).toLowerCase();
   if (!ref.exts.includes(ext)) return { error: `รับเฉพาะไฟล์ ${ref.exts.join(' / ')}` };
