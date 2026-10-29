@@ -94,7 +94,7 @@
 
 ### วิธีทำงาน
 - (2026-10-28) repo เปลี่ยนเป็น **public** เพื่อให้คณะกรรมการ Hackathon ดู source code — ทุก commit เปิดเผย ห้ามมีค่าลับ ข้อมูลส่วนบุคคล หรือข้อมูลจริง · เอกสารส่งประกวดอยู่ใน `Hackaton/` (ไม่ขึ้น git) · หลัง merge ให้สร้าง ZIP source code ใหม่ทุกครั้ง
-- (2026-10-25) ทีมมีหลายคน ใช้ git ปกติ: branch → PR → CI ผ่าน → merge (ไม่บังคับ review) · ใช้ squash merge (repo ยังเปิดให้ merge commit / rebase ได้ และไม่ลบ branch อัตโนมัติ)
+- (2026-10-25) ทีมมีหลายคน ใช้ git ปกติ: branch → PR → CI ผ่าน → merge (ไม่บังคับ review) · ใช้ squash merge (repo ยังเปิดให้ merge commit / rebase ได้ · 2026-10-29 เปิดลบ branch อัตโนมัติหลัง merge แล้ว)
 - (2026-10-28) ตั้ง branch protection ของ `main`: ต้องเปิด PR (ไม่บังคับ approve) และ CI `check` ต้องผ่านก่อน merge · ห้าม force push / ลบ branch · ผู้ดูแล repo ข้ามได้ในกรณีฉุกเฉิน (`gh pr merge --admin`)
 - (2026-10-25) `npm run dev` build ที่ `.next-dev` แยกจาก `npm start` (`.next`) และไม่ดึงข้อมูล 22:00 (ดึงเฉพาะ `npm start`) — เครื่องทีมไม่ต้องตั้ง `OPENDATA_CRON=off` แล้ว
 - ทำบน branch แยก → merge เข้า `main` → push → build + restart เซิร์ฟเวอร์ :4000 (`systemctl stop/start herbcenter`) — งานถือว่าเสร็จเมื่อขึ้นเว็บจริงแล้ว
