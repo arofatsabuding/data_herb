@@ -52,7 +52,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 | `app/analysis` (+ `app/api/analysis/drug-usage`) | เมนู **วิเคราะห์รหัสยา** (ต้อง login) — ยาที่ใช้มาก แบ่ง 3 กลุ่มการเบิกจ่าย (`CLAIM_GROUPS`) + กราฟความเสียหาย (`components/UsageCharts.jsx`) + ผู้ผลิต (`getDrugUsage`, `usageByManufacturer` ใน `lib/kpi.js`, cache ในหน่วยความจำ) |
 | `app/stats` | เมนู **สรุป** (ต้อง login) — สรุปมูลค่ายาสมุนไพรระดับประเทศ + สถิติฐานข้อมูลยา |
 | `app/admin` | **ผู้ดูแลระบบ** — อัปโหลดไฟล์อ้างอิง, ดาวน์โหลดไฟล์ระบบ (ต้อง login) |
-| `app/login`, `app/api/auth/*`, `middleware.js` | **เข้าสู่ระบบด้วย ThaiD** + บัญชีทดสอบ (`GUEST_LOGIN_CODE`, `components/GuestLogin.jsx` — เข้าได้เฉพาะ `GUEST_AREAS` = สรุป/วิเคราะห์รหัสยา) — `lib/auth.js` (session, `ACCESS` สิทธิ์ขั้นต่ำของแต่ละส่วน, dev = `THAID_DEV_CIDS`), `lib/auth-db.js` (data/auth.db: ผู้ใช้ + ประวัติเข้าใช้) |
+| `app/login`, `app/api/auth/*`, `middleware.js` | **เข้าสู่ระบบด้วย ThaiD** + บัญชีทดสอบ (`GUEST_LOGIN_CODE`, `components/GuestLogin.jsx` — เข้าได้เฉพาะ `GUEST_AREAS` = สรุป/วิเคราะห์รหัสยา · `GUEST_FULL_ACCESS=on` = ทุกเมนูชั่วคราว) — `lib/auth.js` (session, `ACCESS` สิทธิ์ขั้นต่ำของแต่ละส่วน, dev = `THAID_DEV_CIDS`), `lib/auth-db.js` (data/auth.db: ผู้ใช้ + ประวัติเข้าใช้) |
 | `app/privacy`, `app/terms` (+ `components/LegalPage.jsx`, `lib/site.js`) | นโยบายความเป็นส่วนตัว / ข้อกำหนดการใช้งาน — **แก้สิ่งที่ระบบเก็บ (ข้อมูลผู้ใช้, cookie, log) ต้องแก้ /privacy ในงานเดียวกัน** |
 | `app/dev` | **ผู้พัฒนา** — รายชื่อผู้ใช้, ตั้ง role (user/admin), ประวัติเข้าใช้ (เฉพาะ dev) |
 | `app/api/v1/[[...path]]`, `app/api/mcp` | REST API / MCP — เรียกเครื่องมือชุดเดียวกันใน `lib/agent-tools.js` (MCP ใช้เฉพาะ `MCP_TOOLS` = group `drug`) |
