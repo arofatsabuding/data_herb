@@ -27,12 +27,7 @@ export default async function DevPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-4 py-8">
       <div>
-        <h1 className="mb-1 text-2xl font-bold text-gray-800">ผู้พัฒนา — ผู้ใช้และการเข้าสู่ระบบ</h1>
-        <p className="text-sm text-gray-600">
-          ผู้ที่เคยเข้าสู่ระบบด้วย ThaiD ทั้งหมด · คนใหม่ได้ role <b>ผู้ใช้</b> · role <b>ผู้พัฒนา</b> กำหนดจากเลขบัตรใน{' '}
-          <span className="mono">THAID_DEV_CIDS</span> (.env) เท่านั้น · ตอนนี้ทุก role เข้าหน้าสรุปและหน้าผู้ดูแลได้
-          (ตั้งที่ <span className="mono">ACCESS</span> ใน lib/auth.js)
-        </p>
+        <h1 className="text-2xl font-bold text-gray-800">ผู้พัฒนา — ผู้ใช้และการเข้าสู่ระบบ</h1>
       </div>
 
       <section className="card overflow-hidden">
