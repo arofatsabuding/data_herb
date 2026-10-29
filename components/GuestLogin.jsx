@@ -4,7 +4,7 @@ import { useActionState, useState } from 'react';
 import { guestLogin } from '@/app/login/actions';
 
 // ปุ่มเข้าใช้ด้วยบัญชีทดสอบ (สำหรับคณะกรรมการ/ผู้ทดสอบที่ไม่สะดวกใช้ ThaiD) — กดแล้วต้องใส่รหัสก่อน
-export default function GuestLogin({ next }) {
+export default function GuestLogin({ next, full }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(guestLogin, null);
 
@@ -45,7 +45,7 @@ export default function GuestLogin({ next }) {
         </button>
       </div>
       {state?.error && <p className="mt-2 text-sm text-rose-600">{state.error}</p>}
-      <p className="mt-2 text-xs text-amber-700">ดูได้เฉพาะหน้าสรุปและวิเคราะห์รหัสยา · ระบบบันทึกเวลาเข้าใช้และ IP</p>
+      <p className="mt-2 text-xs text-amber-700">{full ? 'เข้าได้ทุกเมนู' : 'ดูได้เฉพาะหน้าสรุปและวิเคราะห์รหัสยา'} · ระบบบันทึกเวลาเข้าใช้และ IP</p>
     </form>
   );
 }

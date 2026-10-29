@@ -3,7 +3,7 @@ import Link from 'next/link';
 import logo from '@/public/herbcenter.png';
 import seal from '@/public/thaid-seal.png';
 import GuestLogin from '@/components/GuestLogin';
-import { allowed, currentUser, guestConfigured, safeNext, thaidConfigured } from '@/lib/auth';
+import { allowed, currentUser, guestConfigured, guestFullAccess, safeNext, thaidConfigured } from '@/lib/auth';
 import { logout } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -217,7 +217,7 @@ export default async function LoginPage({ searchParams }) {
                   !error && <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{ERRORS.config}</div>
                 )}
 
-                {guestConfigured() && <GuestLogin next={next} />}
+                {guestConfigured() && <GuestLogin next={next} full={guestFullAccess()} />}
 
                 <ol className="mt-8 space-y-3 border-t border-gray-100 pt-6">
                   {STEPS.map((s, i) => (
