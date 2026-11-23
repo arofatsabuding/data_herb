@@ -32,7 +32,7 @@
 npm install
 npm run import          # Excel ใน publicfiles/ → data/herb.db (ปิดเซิร์ฟเวอร์ก่อน: Windows ล็อกไฟล์)
 npm run import:kpi      # opendata-<ปี>/*.xlsx → data/kpi.db (ไม่ต้องปิดเซิร์ฟเวอร์)
-npm run fetch:opendata  # ดึงข้อมูลจาก opendata.moph.go.th → publicfiles/opendata-2570/ → kpi.db
+npm run fetch:opendata  # ดึงข้อมูลจาก opendata.moph.go.th → publicfiles/opendata-<ปี>/ → kpi.db
 npm run dev             # http://localhost:3000 (เครื่องทีม) — build ไว้ที่ .next-dev
 npm run build && npm start   # http://localhost:4000 (เซิร์ฟเวอร์จริง) — build ไว้ที่ .next
 npm run check           # lint + build (ต้องผ่านก่อนเปิด PR — CI รันแบบเดียวกัน)
@@ -79,7 +79,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 - มูลค่ายาสมุนไพร: มูลค่า = `vs_uc` × `price` ของกลุ่มยา 11 หลัก (`herbal_drug_master_11`) · กลุ่มที่ไม่พบ = 0 บาท และแสดงเป็น **"ไม่พบรายการยาหรือรายการยาถูกยกเลิกรหัส"**
 - **ไม่นับเขตสุขภาพที่ 13** และหน่วยบริการที่ไม่พบเขต (`EXCLUDED_ZONES`)
 - อัตรารหัสยาที่ผิดพลาด = รหัส (หลังล้าง) ที่ไม่พบในไฟล์รหัส 24 หลัก ÷ ทั้งหมด นับตาม **รายการยา (หน่วยบริการ × รหัสยา)** · คอลัมน์ "เปลี่ยนแปลง" แสดงเป็น **%**
-- ไฟล์ในโฟลเดอร์ `opendata-2570/` ตอนนี้ยังเป็น **ข้อมูลปี 2569** (opendata ยังไม่มี 2570 — `fetchYear` ใน manifest) หน้าเว็บและ API ต้องเตือนเรื่องนี้เสมอ จะหายเองเมื่อดึงข้อมูล 2570 ได้จริง
+- เทียบได้เฉพาะ **ปีงบประมาณ 2569 กับ 2570** (ไม่แสดงปี 2568 — `FIRST_YEAR` ใน `lib/kpi.js`) (opendata มีข้อมูลปี 2570 จริงตั้งแต่ 17 พ.ย. 2569) · ไฟล์บันทึกในโฟลเดอร์ของปีที่ดึงได้จริงเสมอ (`fetchYear` ใน manifest ตรงกับโฟลเดอร์) · ปี 2569 ใช้ไฟล์ ณ 16 พ.ย. 2569 ไฟล์เดียว ไฟล์อื่นของปีนั้นซ่อน (`PINNED_FILES` ใน `scripts/kpi-lib.js`) · ไม่แสดงคำเตือนว่าปี 2570 ยังไม่ครบปี (เจ้าของโปรเจกต์ขอเอาออก 2026-11-23)
 - กลุ่มการเบิกจ่าย (`CLAIM_GROUPS`): นับมูลค่ายาแต่ไม่มี Drug Group = เบิกไม่ได้แต่รู้ยอดเงิน · ไม่พบรหัส 24 หลัก หรือไม่นับมูลค่ายาและไม่มี Drug Group = เบิกไม่ได้ไม่รู้ยอดเงิน · มี Drug Group = เบิกได้
 - ข้อมูลยาและมูลค่ายาสมุนไพรเปิดให้ทุกคนอ่าน (API/MCP ไม่ใช้ key) — ตัดสินใจแล้ว
 
@@ -95,7 +95,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 
 ## สิ่งที่ห้าม / ต้องระวัง
 
-- ห้าม commit `.env`, `data/*.db`, `logs/`, `publicfiles/opendata-2570/*.xlsx` (อยู่ใน `.gitignore` แล้ว) และห้ามใส่รหัสผ่าน/API key ลงในโค้ดหรือเอกสาร
+- ห้าม commit `.env`, `data/*.db`, `logs/`, `publicfiles/opendata-*/*.xlsx` ที่ยังไม่อยู่ใน git (อยู่ใน `.gitignore` แล้ว) และห้ามใส่รหัสผ่าน/API key ลงในโค้ดหรือเอกสาร
 - ค่าลับอยู่ใน `.env`: `THAID_CLIENT_ID`, `THAID_CLIENT_SECRET`, `THAID_DEV_CIDS`, `GUEST_LOGIN_CODE` (repo เป็น public — ห้ามเขียนรหัสบัญชีทดสอบในโค้ด/เอกสาร) — ถามเจ้าของโปรเจกต์ ส่งกันทางช่องทางส่วนตัว ห้ามโพสต์ใน issue/PR/แชทกลุ่ม · เครื่องทีมไม่มีค่าเหล่านี้ก็พัฒนาได้ (แค่เข้าสู่ระบบไม่ได้)
 - ห้ามเก็บเลขบัตรประชาชนเต็มลงฐานข้อมูลหรือ log — `data/auth.db` เก็บ sha256 + เลขที่ปิดบางส่วนเท่านั้น
 - PowerShell 5.1 `Set-Content -Encoding utf8` ใส่ BOM หน้าไฟล์ — ใช้เครื่องมือแก้ไฟล์ของ Claude หรือ Bash แทน

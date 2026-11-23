@@ -1,4 +1,4 @@
-// ดึงข้อมูล s_ttm4 จาก opendata.moph.go.th ทุกจังหวัด แล้วบันทึกเป็น Excel รายวันใน publicfiles/opendata-2570/
+// ดึงข้อมูล s_ttm4 จาก opendata.moph.go.th ทุกจังหวัด แล้วบันทึกเป็น Excel รายวันใน publicfiles/opendata-<ปีของข้อมูล>/
 // ชื่อไฟล์: Data_<ปีที่บันทึก>_sttm4_<จำนวนแถว>_<dd-mm-yy พ.ศ.>_<HH.MM>.xlsx  เช่น Data_2570_sttm4_199553_06-10-69_22.05.xlsx
 // จากนั้นนำเข้า data/kpi.db เป็น dataset ใหม่
 //
@@ -7,7 +7,8 @@
 // ตั้งค่า (env):
 //   OPENDATA_FETCH_YEAR  ปีที่ส่งให้ API (ค่าเริ่มต้น auto = ใช้ 2570 ถ้า API มีข้อมูลแล้ว
 //                        ถ้ายังไม่มี ใช้ OPENDATA_FALLBACK_YEAR แทน)
-//   OPENDATA_FALLBACK_YEAR  ปีที่ใช้แทนระหว่างที่ API ยังไม่มีข้อมูลปี 2570 (ค่าเริ่มต้น 2569, none = ไม่ดึง)
+//   OPENDATA_FALLBACK_YEAR  ปีที่ดึงแทนเมื่อ API ไม่มีข้อมูลปี 2570 (ค่าเริ่มต้น none = ไม่ดึง)
+// ไฟล์บันทึกในโฟลเดอร์ของปีที่ดึงได้จริงเสมอ — ข้อมูลปี 2569 ไม่ไปปนในโฟลเดอร์ปี 2570
 const fs = require('fs');
 const path = require('path');
 const XLSX = require('xlsx');
@@ -20,9 +21,9 @@ if (YEAR_ARG !== null && !/^25\d\d$/.test(YEAR_ARG)) {
   console.error(`--year ต้องเป็นปี พ.ศ. 4 หลัก เช่น 2568 (ได้รับ: ${YEAR_ARG})`);
   process.exit(1);
 }
-const SAVE_YEAR = YEAR_ARG ? Number(YEAR_ARG) : kpi.FETCH_YEAR_TARGET;
+let SAVE_YEAR = YEAR_ARG ? Number(YEAR_ARG) : kpi.FETCH_YEAR_TARGET;
 const FETCH_YEAR_SETTING = YEAR_ARG || (process.env.OPENDATA_FETCH_YEAR || 'auto').trim();
-const FALLBACK_YEAR = (process.env.OPENDATA_FALLBACK_YEAR || '2569').trim();
+const FALLBACK_YEAR = (process.env.OPENDATA_FALLBACK_YEAR || 'none').trim();
 let FETCH_YEAR = String(SAVE_YEAR);
 // จังหวัดที่ใช้ตรวจว่า API มีข้อมูลปีนั้นแล้วหรือยัง
 const PROBE_PROVINCES = ['10', '30', '50', '57', '90'];
@@ -244,7 +245,9 @@ async function main() {
     log(`API ยังไม่มีข้อมูลปี ${SAVE_YEAR} — ไม่ดึงข้อมูล (OPENDATA_FALLBACK_YEAR=none)`);
     return;
   }
-  log(`เริ่มดึงข้อมูล s_ttm4 ปี ${FETCH_YEAR} → บันทึกเป็นปี ${SAVE_YEAR}`);
+  // บันทึกในโฟลเดอร์ของปีที่ดึงได้จริง (fetchYear ใน manifest ตรงกับโฟลเดอร์เสมอ)
+  SAVE_YEAR = Number(FETCH_YEAR);
+  log(`เริ่มดึงข้อมูล s_ttm4 ปี ${FETCH_YEAR} → publicfiles/opendata-${SAVE_YEAR}/`);
   const { rows, failed, errors } = await fetchAllProvinces();
 
   if (rows.length === 0) {

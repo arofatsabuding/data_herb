@@ -15,6 +15,7 @@ import {
   VIEWS,
   YEARS_COOKIE,
   availableYears,
+  elapsedDays,
   getAreaOptions,
   getCodeErrors,
   getCompareReport,
@@ -139,7 +140,7 @@ export default async function KpiPage({ searchParams }) {
   // ไฟล์ที่เลือกแต่ยังไม่ได้นำเข้า → สั่งนำเข้าเบื้องหลัง ระหว่างนี้ใช้ไฟล์ล่าสุดที่มี
   for (const s of sets) if (s.pending) ensureImported(s.year, s.pending);
 
-  // เทียบปีล่าสุดที่มีข้อมูล (เช่น 2568 → 2569 → 2570) — การเปลี่ยนแปลงเทียบกับปีก่อนหน้าเสมอ
+  // เทียบปีล่าสุดที่มีข้อมูล (ค่าเริ่มต้น 2569 → 2570) — การเปลี่ยนแปลงเทียบกับปีก่อนหน้าเสมอ
   const years = sets.map((s) => s.year);
   const curYear = years[years.length - 1];
   const prevYear = years.length > 1 ? years[years.length - 2] : null;
@@ -318,6 +319,9 @@ export default async function KpiPage({ searchParams }) {
             )}
 
             {snap && <SnapshotCompare snap={snap} data={snapData} q={q} />}
+
+            {/* ต่อจากการเปรียบเทียบ 2 ช่วงเวลา: เทียบ 2 ปีแบบค่าเฉลี่ย */}
+            <KpiPace report={report} q={q} sets={sets} />
 
             <KpiCodeErrors
               data={codeErrors}
@@ -930,6 +934,101 @@ function NotFound24({ items, q, years }) {
           </table>
         </div>
       )}
+    </section>
+  );
+}
+
+// ผลงาน (มูลค่ายาสมุนไพร) ปีล่าสุดที่ยังไม่ครบปี เทียบกับค่าเฉลี่ยของปีก่อนในจำนวนวันเท่ากัน — แสดงทุกระดับพื้นที่
+// ค่าเฉลี่ยปีก่อน = มูลค่าทั้งปี ÷ 365 × จำนวนวันที่ผ่านไปของปีล่าสุด (นับจาก 1 ต.ค.)
+// แยกตามพื้นที่ย่อย (เขต / จังหวัด / อำเภอ / หน่วยบริการ) · ระดับหน่วยบริการ = หน่วยบริการนั้น 1 แถว
+function KpiPace({ report, q, sets }) {
+  const prevSet = sets[sets.length - 2];
+  const curSet = sets[sets.length - 1];
+  const e = curSet && elapsedDays(curSet);
+  if (!prevSet || !e) return null;
+  const [py, cy] = [prevSet.year, curSet.year];
+  const V = VIEWS[q.view];
+  const val = (byYear, y) => byYear?.[y]?.kpi_value || 0;
+  const pace = (n) => (n / 365) * e.days;
+  const rows = V.child
+    ? [...report.children].sort((a, b) => val(b.byYear, cy) - val(a.byYear, cy) || val(b.byYear, py) - val(a.byYear, py))
+    : [{ key: '', label: report.area.title, byYear: report.totals }];
+  const head = 'whitespace-nowrap px-4 py-3 text-right font-semibold';
+  const cells = (byYear, cls = 'px-4 py-2') => {
+    const p = val(byYear, py);
+    const c = val(byYear, cy);
+    const d = c - pace(p);
+    return (
+      <>
+        <td className={`${cls} text-right`}>{num(p)}</td>
+        <td className={`${cls} text-right`}>{num(pace(p))}</td>
+        <td className={`${cls} text-right font-semibold text-emerald-700`}>{num(c)}</td>
+        <td className={`${cls} whitespace-nowrap text-right ${d < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+          {d > 0 ? '+' : ''}
+          {num(d)}
+        </td>
+        <td className={`${cls} text-right`}>
+          <Change prev={pace(p)} cur={c} />
+        </td>
+      </>
+    );
+  };
+  return (
+    <section className="card mt-6 overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-100 bg-emerald-50/60 px-6 py-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-800">
+            ผลงานปี {cy} เทียบกับค่าเฉลี่ยปี {py} ในช่วง {e.days} วันเท่ากัน
+          </h2>
+          <p className="text-xs text-gray-600">
+            มูลค่ายาสมุนไพร (บาท) · ปี {cy} ข้อมูลถึง {e.asOf} = {e.days} วันนับจาก 1 ต.ค. · ค่าเฉลี่ยปี {py} = มูลค่าทั้งปี ÷ 365 × {e.days}{' '}
+            วัน · ▲ = ผลงานปัจจุบันสูงกว่าค่าเฉลี่ย, ▼ = ต่ำกว่าค่าเฉลี่ย
+          </p>
+        </div>
+        <ExcelButton tables={[{ id: 'kpi-pace', name: `เทียบค่าเฉลี่ย ${py}` }]} filename={kpiFile(q, 'pace')} />
+      </div>
+      <div className="max-h-[36rem] overflow-auto">
+        <table id="kpi-pace" className="w-full text-sm">
+          <thead className="sticky top-0 bg-emerald-50 text-left text-gray-700">
+            <tr>
+              <th className="px-4 py-3 font-semibold">#</th>
+              <th className="px-4 py-3 font-semibold">{V.child ? V.childLabel : 'หน่วยบริการ'}</th>
+              <th className={head}>มูลค่า {py} (ทั้งปี)</th>
+              <th className={head}>ค่าเฉลี่ย {py} ({e.days} วัน)</th>
+              <th className={head}>มูลค่า {cy} (ถึง {e.asOf})</th>
+              <th className={head}>ส่วนต่างจากค่าเฉลี่ย</th>
+              <th className={head}>เทียบค่าเฉลี่ย</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {rows.map((r, i) => (
+              <tr key={r.key || i} className="hover:bg-emerald-50/40">
+                <td className="px-4 py-2 text-gray-400">{i + 1}</td>
+                <td className="px-4 py-2">
+                  {V.child ? (
+                    <Link href={childHref(q, V.child, r.key)} className="text-emerald-700 hover:underline">
+                      {r.label}
+                    </Link>
+                  ) : (
+                    r.label
+                  )}
+                </td>
+                {cells(r.byYear)}
+              </tr>
+            ))}
+          </tbody>
+          {V.child && (
+            <tfoot className="sticky bottom-0 border-t-2 border-emerald-200 bg-emerald-50 font-bold text-gray-800">
+              <tr>
+                <td className="px-4 py-3" colSpan={2}>
+                  รวมทั้งหมด ({num(rows.length)} {V.childLabel})
+                </td>
+                {cells(report.totals, 'px-4 py-3')}
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
     </section>
   );
 }

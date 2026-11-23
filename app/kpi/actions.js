@@ -12,7 +12,7 @@ export async function selectFile(prevState, formData) {
   const year = Number(formData.get('year'));
   const choice = String(formData.get('file') || 'latest');
   const files = kpiLib.listFiles(year);
-  if (!kpiLib.listYears().includes(year)) return { error: 'ไม่พบปีที่เลือก' };
+  if (!availableYears().includes(year)) return { error: 'ไม่พบปีที่เลือก' };
   if (choice !== 'latest' && !files.some((f) => f.name === choice)) return { error: 'ไม่พบไฟล์ที่เลือก' };
 
   const store = await cookies();
