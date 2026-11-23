@@ -19,6 +19,9 @@ const KPI_DB_PATH = process.env.KPI_DB_PATH || path.join(ROOT, 'data', 'kpi.db')
 const HERB_DB_PATH = path.join(ROOT, 'data', 'herb.db');
 const FETCH_STATUS_PATH = path.join(ROOT, 'data', 'fetch-status.json');
 const FETCH_YEAR_TARGET = 2570; // ปีที่ดึงจาก API ทุกวัน
+// ปีที่ปิดแล้ว ใช้ไฟล์เดียวตามที่เจ้าของโปรเจกต์กำหนด (ไฟล์อื่นของปีนั้นซ่อน ไม่ให้เลือก)
+// ไม่มีไฟล์นี้ในเครื่อง (เช่น CI / เครื่องทีม) → แสดงทุกไฟล์ของปีนั้นตามปกติ
+const PINNED_FILES = { 2569: 'Data_2569_sttm4_201630_16-11-69_22.05.xlsx' }; // ข้อมูลปี 2569 ณ 16 พ.ย. 2569
 const MAX_DATASETS = Number(process.env.KPI_MAX_DATASETS || 12); // จำนวนไฟล์ที่เก็บในฐานข้อมูลพร้อมกัน
 
 const DATA_COLUMNS = ['id', 'hospcode', 'areacode', 'flag_sent', 'date_com', 'b_year', 'didstd',
@@ -118,7 +121,7 @@ function listFiles(year) {
   if (!fs.existsSync(dir)) return [];
   const manifest = readJson(path.join(dir, 'manifest.json'), {});
   const re = fileRe(year);
-  return fs
+  const files = fs
     .readdirSync(dir)
     .map((name) => {
       const m = re.exec(name);
@@ -138,6 +141,8 @@ function listFiles(year) {
     })
     .filter(Boolean)
     .sort((a, b) => b.sortKey.localeCompare(a.sortKey) || b.mtime - a.mtime);
+  const pinned = files.filter((f) => f.name === PINNED_FILES[year]);
+  return pinned.length ? pinned : files;
 }
 
 function filePath(year, name) {
