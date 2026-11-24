@@ -1,8 +1,10 @@
 'use server';
 
 import path from 'path';
+import { revalidatePath } from 'next/cache';
 import { userFor } from '@/lib/auth';
 import { rebuildReferences } from '@/lib/scheduler';
+import { reviewTarget } from '@/lib/targets';
 import refs from '@/scripts/reference-files';
 
 const MAX_SIZE = 50 * 1024 * 1024;
@@ -31,4 +33,16 @@ export async function uploadReference(prevState, formData) {
   const dest = refs.replaceReference(ref.key, buffer, ext, { original, rows: info.rows, detail: info.detail });
   rebuildReferences(`อัปโหลด ${path.basename(dest)}`);
   return { ok: `บันทึกเป็น ${path.basename(dest)} แล้ว (${info.detail}) — กำลังสร้างฐานข้อมูลใหม่` };
+}
+
+// อนุมัติ / ไม่อนุมัติคำขอค่าเป้าหมาย — ต้องเป็นผู้ดูแลที่เข้าสู่ระบบด้วย ThaiD (ACCESS.approve)
+export async function decideTarget(formData) {
+  const user = await userFor('approve');
+  if (!user) return;
+  const decision = formData.get('decision');
+  if (decision !== 'approve' && decision !== 'reject') return; // ไม่รู้ว่ากดปุ่มไหน = ไม่ทำอะไร
+  reviewTarget(Number(formData.get('id')), decision === 'approve', user.id);
+  revalidatePath('/admin');
+  revalidatePath('/targets');
+  revalidatePath('/kpi');
 }

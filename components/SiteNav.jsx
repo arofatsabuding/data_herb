@@ -103,6 +103,7 @@ export default function SiteNav() {
         ? [
             { href: '/stats', label: 'สรุป', icon: ChartIcon, tone: 'gold' },
             { href: '/analysis', label: 'วิเคราะห์รหัสยา', icon: SearchChartIcon, tone: 'gold' },
+            user.targets && { href: '/targets', label: 'ค่าเป้าหมาย', icon: ChartIcon, tone: 'gold' },
             user.admin && { href: '/admin', label: 'ผู้ดูแลระบบ', icon: LockIcon, tone: 'gold' },
             user.dev && { href: '/dev', label: 'ผู้พัฒนา', icon: CodeIcon, tone: 'dev' },
           ].filter(Boolean)
