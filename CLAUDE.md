@@ -51,7 +51,8 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 | `app/kpi` (+ `actions.js`) | เมนู **มูลค่ายาสมุนไพร** (เดิมชื่อ "ตัวชี้วัด") — เลือกระดับพื้นที่, เลือกปีที่เทียบ (cookie `kpi_years`), เลือกไฟล์ข้อมูลแต่ละปี (cookie `kpi_files`), ปุ่มดึงรายงาน, เปรียบเทียบ 2 ช่วงเวลาในปีเดียวกัน (`resolveSnapshots`, `getSnapshotCompare`) |
 | `app/analysis` (+ `app/api/analysis/drug-usage`) | เมนู **วิเคราะห์รหัสยา** (ต้อง login) — ยาที่ใช้มาก แบ่ง 3 กลุ่มการเบิกจ่าย (`CLAIM_GROUPS`) + กราฟความเสียหาย (`components/UsageCharts.jsx`) + ผู้ผลิต (`getDrugUsage`, `usageByManufacturer` ใน `lib/kpi.js`, cache ในหน่วยความจำ) |
 | `app/stats` | เมนู **สรุป** (ต้อง login) — สรุปมูลค่ายาสมุนไพรระดับประเทศ + สถิติฐานข้อมูลยา |
-| `app/admin` | **ผู้ดูแลระบบ** — อัปโหลดไฟล์อ้างอิง, ดาวน์โหลดไฟล์ระบบ (ต้อง login) |
+| `app/admin` | **ผู้ดูแลระบบ** — อัปโหลดไฟล์อ้างอิง, ดาวน์โหลดไฟล์ระบบ, อนุมัติ/ไม่อนุมัติค่าเป้าหมาย (ต้อง login · อนุมัติ = `ACCESS.approve` ผู้ดูแลขึ้นไป) |
+| `app/targets` (+ `lib/targets.js`, `components/TargetForm.jsx`, `TargetTable.jsx`) | **ค่าเป้าหมาย** ระดับเขตสุขภาพ / จังหวัด / อำเภอ / หน่วยบริการ แยกกัน (`TARGET_LEVELS` — ไม่รวมจากระดับล่าง) (ต้อง login ด้วย ThaiD, บัญชีทดสอบไม่ได้) — กรอกเป้า 3/6/12 เดือน (ยอดสะสมจาก 1 ต.ค.) → รออนุมัติที่ /admin → ค่าที่อนุมัติล่าสุดใช้คำนวณ % ในตาราง `KpiTargets` หน้า /kpi (`getAreaValues`) |
 | `app/login`, `app/api/auth/*`, `middleware.js` | **เข้าสู่ระบบด้วย ThaiD** + บัญชีทดสอบ (`GUEST_LOGIN_CODE`, `components/GuestLogin.jsx` — เข้าได้เฉพาะ `GUEST_AREAS` = สรุป/วิเคราะห์รหัสยา · `GUEST_FULL_ACCESS=on` / `THAID_FULL_ACCESS=on` = บัญชีทดสอบ / ทุกบัญชี ThaiD เข้าทุกเมนูชั่วคราว) — `lib/auth.js` (session, `ACCESS` สิทธิ์ขั้นต่ำของแต่ละส่วน, dev = `THAID_DEV_CIDS`), `lib/auth-db.js` (data/auth.db: ผู้ใช้ + ประวัติเข้าใช้) |
 | `app/privacy`, `app/terms` (+ `components/LegalPage.jsx`, `lib/site.js`) | นโยบายความเป็นส่วนตัว / ข้อกำหนดการใช้งาน — **แก้สิ่งที่ระบบเก็บ (ข้อมูลผู้ใช้, cookie, log) ต้องแก้ /privacy ในงานเดียวกัน** |
 | `app/dev` | **ผู้พัฒนา** — รายชื่อผู้ใช้, ตั้ง role (user/admin), ประวัติเข้าใช้ (เฉพาะ dev) |
@@ -69,7 +70,7 @@ npm run test:smoke      # ตรวจหน้าเว็บ/API/MCP ของ
 
 ฐานข้อมูล (ไม่อยู่ใน git — สร้างจากสคริปต์):
 - `data/herb.db`: `drug_codes`, `ttmt_master`, `drug_group_rates`, `meta`, view `drug_lookup`
-- `data/auth.db`: `users` (cid_hash, cid_masked, name, role), `login_log` — สร้างเองตอน login ครั้งแรก
+- `data/auth.db`: `users` (cid_hash, cid_masked, name, role), `login_log` — สร้างเองตอน login ครั้งแรก · `area_targets` (ค่าเป้าหมาย: level zone/province/district/hosp + code, status pending/approved/rejected/replaced — ตาราง `hosp_targets` รุ่นแรกย้ายเข้าเองอัตโนมัติ) — สร้างเองตอนใช้ครั้งแรก
 - `data/kpi.db`: `datasets` (1 ไฟล์ = 1 dataset), `sttm4` (หน่วยบริการ × รหัสยา), `kpi_hosp` (สรุปรายหน่วยบริการ), `dtam24`, `herbal_drug_master_11`, `health_office`, `health_office_type`
 
 ## กติกาข้อมูล (อย่าเปลี่ยนโดยไม่ถามเจ้าของโปรเจกต์)

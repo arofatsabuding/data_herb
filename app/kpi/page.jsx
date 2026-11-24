@@ -16,6 +16,7 @@ import {
   YEARS_COOKIE,
   availableYears,
   elapsedDays,
+  getAreaValues,
   getAreaOptions,
   getCodeErrors,
   getCompareReport,
@@ -35,6 +36,7 @@ import {
 import { MAX_RETRIES, cronEnabled, ensureImported, fetchInProgress } from '@/lib/scheduler';
 import kpiLib from '@/scripts/kpi-lib';
 import { userFor } from '@/lib/auth';
+import { TARGET_LEVELS, TARGET_PERIODS, approvedTargets, currentPeriod } from '@/lib/targets';
 import { checkFetch, fetchNow, selectFile, selectYears } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -322,6 +324,8 @@ export default async function KpiPage({ searchParams }) {
 
             {/* ต่อจากการเปรียบเทียบ 2 ช่วงเวลา: เทียบ 2 ปีแบบค่าเฉลี่ย */}
             <KpiPace report={report} q={q} sets={sets} />
+
+            <KpiTargets q={q} sets={sets} />
 
             <KpiCodeErrors
               data={codeErrors}
@@ -1030,5 +1034,140 @@ function KpiPace({ report, q, sets }) {
         </table>
       </div>
     </section>
+  );
+}
+
+// ระดับของค่าเป้าหมายที่แสดงในแต่ละมุมมอง = พื้นที่ที่เลือก + ระดับถัดลงไป 1 ระดับ (เฉพาะพื้นที่ที่อยู่ในพื้นที่ที่เลือก)
+// ประเทศ = ทุกเขต + ทุกจังหวัด · เขต = เขตนั้น + จังหวัดในเขต · จังหวัด = จังหวัดนั้น + อำเภอในจังหวัด
+// อำเภอ = อำเภอนั้น + หน่วยบริการในอำเภอ · หน่วยบริการ = หน่วยบริการนั้น
+const TARGET_VIEW_LEVELS = {
+  country: ['zone', 'province'],
+  zone: ['zone', 'province'],
+  province: ['province', 'district'],
+  district: ['district', 'hosp'],
+  hosp: ['hosp'],
+};
+
+// ผลงานปีล่าสุดเทียบค่าเป้าหมาย (รอบ 3 / 6 / 12 เดือน) แยกตารางตามระดับ: เขตสุขภาพ / จังหวัด / อำเภอ / หน่วยบริการ
+// แต่ละพื้นที่มีค่าเป้าหมายของตัวเอง (ไม่ได้รวมจากระดับล่าง) — แสดงเฉพาะพื้นที่ที่มีค่าเป้าหมายที่อนุมัติแล้ว
+function KpiTargets({ q, sets }) {
+  const curSet = sets[sets.length - 1];
+  if (!curSet) return null;
+  const e = elapsedDays(curSet);
+  const cy = curSet.year;
+  const now = e && currentPeriod(e.days);
+  const groups = TARGET_VIEW_LEVELS[q.view]
+    .map((level) => {
+      const targets = approvedTargets(cy, level);
+      const values = getAreaValues(q, curSet.ds, level, targets.map((t) => t.code));
+      const rows = targets
+        .filter((t) => values[t.code])
+        .map((t) => ({ ...t, ...values[t.code], name: values[t.code].name || t.area_name, value: values[t.code].kpi_value || 0 }))
+        .sort((a, b) => b.value / (b.target_12m || 1) - a.value / (a.target_12m || 1));
+      return { level, rows };
+    })
+    .filter((g) => g.rows.length);
+  return (
+    <section className="card mt-6 overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-100 bg-emerald-50/60 px-6 py-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-800">ผลงานปี {cy} เทียบค่าเป้าหมาย</h2>
+          <p className="text-xs text-gray-600">
+            มูลค่ายาสมุนไพร (บาท){e && ` ถึง ${e.asOf} (${e.days} วัน)`} ÷ ค่าเป้าหมายสะสมที่ผู้ดูแลอนุมัติแล้ว × 100 · แยกตามระดับ เขตสุขภาพ /
+            จังหวัด / อำเภอ / หน่วยบริการ (แต่ละพื้นที่มีค่าเป้าหมายของตัวเอง) · แถบสีเหลือง = รอบที่กำลังนับอยู่ —{' '}
+            <Link href="/targets" className="text-emerald-700 hover:underline">
+              กำหนดค่าเป้าหมาย (เข้าสู่ระบบด้วย ThaiD)
+            </Link>
+          </p>
+        </div>
+        {groups.length > 0 && (
+          <ExcelButton
+            tables={groups.map((g) => ({ id: `kpi-targets-${g.level}`, name: `เป้าหมาย${TARGET_LEVELS[g.level].label} ${cy}` }))}
+            filename={kpiFile(q, 'targets')}
+          />
+        )}
+      </div>
+      {groups.length === 0 ? (
+        <p className="px-6 py-6 text-sm text-gray-500">ยังไม่มีค่าเป้าหมายปี {cy} ที่อนุมัติแล้วในพื้นที่นี้</p>
+      ) : (
+        <div className="divide-y divide-emerald-100">
+          {groups.map((g) => (
+            <TargetLevelTable key={g.level} level={g.level} rows={g.rows} q={q} cy={cy} now={now} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TargetLevelTable({ level, rows, q, cy, now }) {
+  const L = TARGET_LEVELS[level];
+  const pct = (v, t) => (Number(t) > 0 ? (v / t) * 100 : null);
+  const sum = (k) => rows.reduce((s, r) => s + Number(r[k] || 0), 0);
+  const head = 'whitespace-nowrap px-4 py-3 text-right font-semibold';
+  const hl = (k) => (k === now ? 'bg-amber-50/60' : '');
+  const cells = (r, cls = 'px-4 py-2') => (
+    <>
+      <td className={`${cls} text-right font-semibold text-emerald-700`}>{num(r.value)}</td>
+      {TARGET_PERIODS.map((p) => {
+        const v = pct(r.value, r[p.key]);
+        return [
+          <td key={p.key} className={`${cls} text-right ${hl(p.key)}`}>
+            {num(r[p.key])}
+          </td>,
+          <td key={`${p.key}-pct`} className={`${cls} whitespace-nowrap text-right ${hl(p.key)}`}>
+            {v === null ? '-' : <span className={v >= 100 ? 'font-semibold text-emerald-700' : 'text-gray-700'}>{v.toFixed(2)}%</span>}
+          </td>,
+        ];
+      })}
+    </>
+  );
+  return (
+    <div>
+      <h3 className="px-6 pb-1 pt-4 text-sm font-bold text-emerald-800">
+        ระดับ{L.label} ({num(rows.length)} {{ hosp: 'แห่ง', zone: 'เขต', province: 'จังหวัด', district: 'อำเภอ' }[level]})
+      </h3>
+      <div className="max-h-[32rem] overflow-auto">
+        <table id={`kpi-targets-${level}`} className="w-full text-sm">
+          <thead className="sticky top-0 bg-emerald-50 text-left text-gray-700">
+            <tr>
+              <th className="px-4 py-3 font-semibold">#</th>
+              <th className="px-4 py-3 font-semibold">{L.label}</th>
+              <th className={head}>มูลค่า {cy}</th>
+              {TARGET_PERIODS.map((p) => [
+                <th key={p.key} className={`${head} ${p.key === now ? 'bg-amber-100' : ''}`}>
+                  เป้าหมาย {p.label}
+                </th>,
+                <th key={`${p.key}-pct`} className={`${head} ${p.key === now ? 'bg-amber-100' : ''}`}>
+                  % ของเป้า {p.label}
+                </th>,
+              ])}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {rows.map((r, i) => (
+              <tr key={r.code} className="hover:bg-emerald-50/40">
+                <td className="px-4 py-2 text-gray-400">{i + 1}</td>
+                <td className="px-4 py-2">
+                  <Link href={level === 'district' ? kpiHref({ view: 'district', province: r.province, district: r.code }) : childHref(q, level, r.code)} className="text-emerald-700 hover:underline">
+                    {r.name}
+                  </Link>
+                  {level === 'hosp' && <span className="mono ml-1 text-xs text-gray-500">{r.code}</span>}
+                </td>
+                {cells(r)}
+              </tr>
+            ))}
+          </tbody>
+          <tfoot className="sticky bottom-0 border-t-2 border-emerald-200 bg-emerald-50 font-bold text-gray-800">
+            <tr>
+              <td className="px-4 py-3" colSpan={2}>
+                รวม ({num(rows.length)} {L.label})
+              </td>
+              {cells({ value: sum('value'), ...Object.fromEntries(TARGET_PERIODS.map((p) => [p.key, sum(p.key)])) }, 'px-4 py-3')}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
   );
 }
